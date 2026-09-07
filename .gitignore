@@ -1,0 +1,20 @@
+# 密钥与凭据绝不进 git
+.env
+.env.*
+
+# 构建产物
+build/*
+!build/.gitkeep
+data/
+
+# 临时文件
+*.tmp
+*.bak
+
+# pdfsig 提取产物
+*.sig0
+
+# 根目录演示产物（统一输出到 build/）
+/*.pdf
+
+SUMMARY.md

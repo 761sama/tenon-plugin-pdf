@@ -1,0 +1,16 @@
+# tenon-plugin-pdf — 开发规范
+
+Go 语言 PDF 生成库。模块路径 `gopkg.761sama.com/tenon-plugin-pdf`。
+
+## 目录结构
+- `doc/` — 文档
+- `build/` — 构建产物
+- `data/` — 运行时数据（如需）
+
+## 提交规范
+- git 提交信息一律中文
+- 每个功能模块完成即提交，保持可追溯
+
+## 安全检查
+- 密钥与凭据绝不进 git：禁止提交 `.env` 及任何备份/历史、硬编码凭据
+- 提交前必查 `git status` / `git ls-files`；`.gitignore` 排除 `.env*`
