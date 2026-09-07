@@ -61,7 +61,7 @@ func TestRowSpanGridAndHeight(t *testing.T) {
 	grid, _ = tb.resolveGrid() // 内容变更后重新展开网格
 	widths := tb.colWidths(180, grid)
 	hs := tb.rowHeights(grid, widths)
-	need := tb.cellHeight(tb.Rows[0][0].Text, 60)
+	need := tb.cellHeight(placedCell{Cell: tb.Rows[0][0]}, 60)
 	got := hs[0] + hs[1] + hs[2]
 	if got < need {
 		t.Errorf("rowspan 总高 %v < 需求 %v", got, need)

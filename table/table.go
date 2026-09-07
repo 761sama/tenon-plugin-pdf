@@ -25,6 +25,13 @@ type Cell struct {
 	Text    string
 	ColSpan int
 	RowSpan int
+
+	// 可选覆盖（零值取表格默认）
+	Color color.Color     // 文本颜色（nil 取 TextColor）
+	Bg    color.Color     // 单元格底色（nil 不填充；表头行默认 HeaderBg）
+	Align *text.Alignment // 水平对齐（nil 取所在列对齐）
+	Font  font.Resource   // 字体（nil 取 Table.Font）
+	Size  float64         // 字号（0 取 Table.FontSize）
 }
 
 // C 构造普通单元格。
@@ -59,6 +66,14 @@ type Table struct {
 	Border       color.Color   // 边框色，默认黑
 	BorderW      float64       // 边框线宽，默认 0.5
 	HeaderRepeat bool          // 跨页时重复表头，默认 true
+
+	// HeaderRows 将 Rows 前 N 行作为表头行（底色 HeaderBg，跨页随 HeaderRepeat 重复）。
+	// 与 Column.Title 表头互斥：HeaderRows > 0 时忽略列标题。
+	// 表头行走正常单元格排版（支持多行文本与 Cell 覆盖），适合复杂表头。
+	HeaderRows int
+
+	TextColor   color.Color // 内容文本色，默认黑
+	HeaderColor color.Color // 表头文本色，默认取 TextColor（再默认黑）
 
 	// AutoWidth 为 true 时，Width 为 0 的列按内容自适应测算列宽
 	//（默认 false：均分剩余宽度）。定宽列不受影响。
@@ -156,6 +171,29 @@ func (t *Table) borderW() float64 {
 		return t.BorderW
 	}
 	return 0.5
+}
+
+func (t *Table) textColor() color.Color {
+	if t.TextColor != nil {
+		return t.TextColor
+	}
+	return color.Black
+}
+
+func (t *Table) headerTextColor() color.Color {
+	if t.HeaderColor != nil {
+		return t.HeaderColor
+	}
+	return t.textColor()
+}
+
+// headerRowCount 表头行数（截断到数据行数）。
+func (t *Table) headerRowCount() int {
+	n := t.HeaderRows
+	if n > len(t.Rows) {
+		n = len(t.Rows)
+	}
+	return n
 }
 
 // hasHeader 所有列标题为空时不绘制表头。
@@ -264,7 +302,8 @@ func (t *Table) resolveGrid() ([][]placedCell, []bool) {
 			if r+rs > nRow {
 				rs = nRow - r // 截断到行数
 			}
-			pc := placedCell{Cell: Cell{Text: cell.Text, ColSpan: cs, RowSpan: rs}, row: r, col: col}
+			pc := placedCell{Cell: cell, row: r, col: col}
+			pc.ColSpan, pc.RowSpan = cs, rs // 截断后的跨度
 			grid[r] = append(grid[r], pc)
 			if rs > 1 {
 				for rr := r + 1; rr < r+rs; rr++ {
@@ -289,20 +328,26 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 	grid, breakBefore := t.resolveGrid()
 	widths := t.colWidths(w, grid)
 	heights := t.rowHeights(grid, widths)
+	headerRows := t.headerRowCount()
 	headerH := 0.0
-	if t.hasHeader() {
+	if headerRows > 0 {
+		for r := 0; r < headerRows; r++ {
+			headerH += heights[r]
+		}
+	} else if t.hasHeader() {
 		headerH = t.headerHeight()
 	}
 
-	// 分页布局：把行分配到各页（跨行块整体移动）
+	// 分页布局：把内容行分配到各页（跨行块整体移动）
 	type pageRun struct {
 		page       *page.Page
 		top        float64
 		start, end int // 行区间 [start, end)
 	}
-	runs := []pageRun{{page: p, top: yTop}}
+	runs := []pageRun{{page: p, top: yTop, start: headerRows}}
 	y := yTop - headerH
-	for i, h := range heights {
+	for i := headerRows; i < len(heights); i++ {
+		h := heights[i]
 		cur := &runs[len(runs)-1]
 		if y-h < bottomY && newPage != nil && i > cur.start {
 			// 当前页放不下 → 找安全分页边界（回溯跨行块起点）
@@ -328,7 +373,7 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 
 	// 逐页渲染
 	for _, run := range runs {
-		t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, run.start, run.end)
+		t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, headerRows, run.start, run.end)
 	}
 	last := runs[len(runs)-1]
 	endY := last.top - headerH
@@ -361,7 +406,7 @@ func (t *Table) rowHeights(grid [][]placedCell, widths []float64) []float64 {
 			if c.RowSpan > 1 {
 				continue
 			}
-			if h := t.cellHeight(c.Text, spanWidth(widths, c.col, c.ColSpan)); h > maxH {
+			if h := t.cellHeight(c, spanWidth(widths, c.col, c.ColSpan)); h > maxH {
 				maxH = h
 			}
 		}
@@ -373,7 +418,7 @@ func (t *Table) rowHeights(grid [][]placedCell, widths []float64) []float64 {
 			if c.RowSpan <= 1 {
 				continue
 			}
-			need := t.cellHeight(c.Text, spanWidth(widths, c.col, c.ColSpan))
+			need := t.cellHeight(c, spanWidth(widths, c.col, c.ColSpan))
 			have := 0.0
 			for r := c.row; r < c.row+c.RowSpan; r++ {
 				have += hs[r]
@@ -392,10 +437,16 @@ func (t *Table) minRowHeight() float64 {
 	return f.LineHeight(t.fontSize()) + 2*t.padding()
 }
 
-// cellHeight 单元格内容所需高度（按给定宽度换行）。
-func (t *Table) cellHeight(s string, w float64) float64 {
+// cellHeight 单元格内容所需高度（按给定宽度换行；字体/字号取单元格覆盖）。
+func (t *Table) cellHeight(c placedCell, w float64) float64 {
 	f, size, pad := t.bodyFont(), t.fontSize(), t.padding()
-	lines := len(text.Wrap(f, size, w-2*pad, s))
+	if c.Font != nil {
+		f = c.Font
+	}
+	if c.Size > 0 {
+		size = c.Size
+	}
+	lines := len(text.Wrap(f, size, w-2*pad, c.Text))
 	return float64(lines)*f.LineHeight(size) + 2*pad
 }
 
@@ -407,48 +458,84 @@ func spanWidth(widths []float64, col, span int) float64 {
 	return w
 }
 
-// renderRun 渲染一页：表头 + [start, end) 行。
+// renderRun 渲染一页：表头（表头行或列标题）+ [start, end) 内容行。
 func (t *Table) renderRun(p *page.Page, x, top, w float64, widths, heights []float64,
-	grid [][]placedCell, headerH float64, start, end int) {
+	grid [][]placedCell, headerH float64, headerRows, start, end int) {
 	y := top
-	if headerH > 0 {
+	if headerRows > 0 {
+		t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
+		y -= headerH
+	} else if headerH > 0 {
 		t.renderHeader(p, x, y, w, widths, headerH)
 		y -= headerH
 	}
+	t.renderRows(p, x, y, widths, heights, grid, start, end, false)
+}
+
+// renderRows 渲染 [start, end) 行；header 为 true 时应用表头样式（底色/文本色）。
+func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float64,
+	grid [][]placedCell, start, end int, header bool) {
 	pad := t.padding()
+	y := top
 	for r := start; r < end; r++ {
 		rh := heights[r]
-		if t.RowBg != nil {
+		if !header && t.RowBg != nil {
 			p.Save().SetFillColor(t.RowBg)
-			p.FillRect(x, y-rh, w, rh)
+			p.FillRect(x, y-rh, spanWidth(widths, 0, len(widths)), rh)
 			p.Restore()
 		}
-		// 边框与文本（按单元格，含合并区）
-		f, size := t.bodyFont(), t.fontSize()
-		leading := f.LineHeight(size)
+		// 底色、边框与文本（按单元格，含合并区）
 		for _, c := range grid[r] {
+			f, size := t.bodyFont(), t.fontSize()
+			if c.Font != nil {
+				f = c.Font
+			}
+			if c.Size > 0 {
+				size = c.Size
+			}
+			leading := f.LineHeight(size)
 			cx := x + spanWidth(widths, 0, c.col)
 			cw := spanWidth(widths, c.col, c.ColSpan)
 			ch := 0.0
 			for rr := r; rr < r+c.RowSpan; rr++ {
 				ch += heights[rr]
 			}
+			bg := c.Bg
+			if bg == nil && header {
+				bg = t.headerBg()
+			}
+			if bg != nil {
+				p.Save().SetFillColor(bg)
+				p.FillRect(cx, y-ch, cw, ch)
+				p.Restore()
+			}
 			p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
 			p.StrokeRect(cx, y-ch, cw, ch)
 			p.Restore()
 			if c.Text != "" {
+				txtColor := c.Color
+				if txtColor == nil {
+					if header {
+						txtColor = t.headerTextColor()
+					} else {
+						txtColor = t.textColor()
+					}
+				}
 				lines := text.Wrap(f, size, cw-2*pad, c.Text)
 				textH := float64(len(lines)) * leading
-				// 跨行单元格垂直居中，其余顶对齐
+				// 跨行单元格与表头行垂直居中，其余顶对齐
 				voff := pad
-				if c.RowSpan > 1 && textH+2*pad < ch {
+				if (c.RowSpan > 1 || header) && textH+2*pad < ch {
 					voff = pad + (ch-2*pad-textH)/2
 				}
 				ty := y - voff - f.Ascent(size)
 				align := t.Columns[c.col].Align
+				if c.Align != nil {
+					align = *c.Align
+				}
+				p.SetFillColor(txtColor)
 				for _, line := range lines {
 					xoff := text.OffsetX(f, size, cw-2*pad, line, align)
-					p.SetFillColor(color.Black)
 					p.DrawText(f, size, cx+pad+xoff, ty, line)
 					ty -= leading
 				}
@@ -473,11 +560,11 @@ func (t *Table) renderHeader(p *page.Page, x, y, w float64, widths []float64, hh
 	f := t.headFont()
 	size := t.headerSize()
 	cx = x
+	p.SetFillColor(t.headerTextColor())
 	for i, c := range t.Columns {
 		if c.Title != "" {
 			tw := f.TextWidth(c.Title, size)
 			tx := cx + (widths[i]-tw)/2
-			p.SetFillColor(color.Black)
 			p.DrawText(f, size, tx, y-t.padding()-f.Ascent(size), c.Title)
 		}
 		cx += widths[i]
