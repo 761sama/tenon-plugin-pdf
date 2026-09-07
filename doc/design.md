@@ -21,7 +21,7 @@ tenon-plugin-pdf 是纯 Go 标准库、零第三方依赖的 PDF 1.7 生成库�
 │ 门面层   pdf（根包：Document 装配与序列化）              │
 ├─────────────────────────────────────────────────────────┤
 │ 组件层   page table form outline annot metadata          │
-│          security sign                                   │
+│          security sign jsongen（JSON 描述 → 文档）       │
 ├─────────────────────────────────────────────────────────┤
 │ 表现层   content（内容流） font/ttf（字体） image（图像） │
 │          text（排版） color（颜色）                      │
@@ -29,6 +29,11 @@ tenon-plugin-pdf 是纯 Go 标准库、零第三方依赖的 PDF 1.7 生成库�
 │ 基础层   object（对象模型） writer（文件结构）            │
 └─────────────────────────────────────────────────────────┘
 ```
+
+jsongen 是组件层的文档模板引擎：解析 JSON（页面/样式/内容块），
+用 page + table + text 完成流式排版与自动分页。安全约束：字体只能经
+`FontRegistry` 在代码层注册（JSON 按 id 引用，禁止路径注入）；段距采用
+CSS 式外边距折叠（相邻 spaceAfter/spaceBefore 取较大者）。
 
 ### 2.2 依赖方向（实测自代码 import，无环）
 
@@ -46,6 +51,7 @@ page    ←  table、form（字段挂到页）、pdf
 security→  仅 object
 sign    →  零项目内依赖（纯标准库 + 字节处理）
 pdf（根）→  annot font form image metadata object outline page security sign writer
+jsongen →  pdf color font page table text（组件层末端，无人依赖）
 ```
 
 关键点：

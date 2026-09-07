@@ -44,7 +44,8 @@ err := doc.SaveFile("out.pdf")
 | `outline` | 书签大纲（多级、加粗/斜体/颜色、折叠） |
 | `metadata` | 文档信息字典 + XMP 元数据流 |
 | `form` | AcroForm 交互表单：文本域、复选框 |
-| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行）、边框、跨页重复表头 |
+| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行）、边框、跨页重复表头、表头行/单元格颜色覆盖 |
+| `jsongen` | 从 JSON 描述生成 PDF（格式见 `doc/json-format.md`）；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）加密；公钥证书加密（PubSec，多收件人） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、验签、证书链验证、RFC 3161 时间戳、多重签名（增量会签）、自签名/链式证书 |
 | `pdf`（根包） | Document 门面：聚合各组件并序列化完整文件 |
@@ -280,6 +281,10 @@ tenon-pdf table -o table.pdf -rows 120  # 合同样式表格演示（跨页重�
 tenon-pdf cjk -o cjk.pdf                # 中文采购单演示（思源黑体子集嵌入）
 tenon-pdf cjk -font NotoSansSC-Regular.ttf -o cjk.pdf  # 使用完整字体文件
 tenon-pdf cjk -font simsun.ttc -fontindex 0 -o cjk.pdf # 使用 TTC 集合成员
+tenon-pdf json -o out.pdf data/contract.json \         # 从 JSON 描述生成 PDF
+  -font song=C:\Windows\Fonts\simsun.ttc@0 \           # 注册 TTC 成员字体（id=路径@序号）
+  -font hei=C:\Windows\Fonts\simhei.ttf \              # 注册 TTF（id=路径）
+  -font mono=builtin:Courier                           # 注册标准 14 字体（id=builtin:名）
 tenon-pdf encrypt -o enc.pdf -user u123 -owner o456 -aes256 -no-copy
 tenon-pdf encrypt -o enc.pdf -recip alice.pem -recip bob.pem # 公钥证书加密
 tenon-pdf sign -o signed.pdf -selfsign "张三" -reason "合同审批"
