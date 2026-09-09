@@ -28,6 +28,37 @@ func TestEncryptCmd(t *testing.T) {
 	}
 }
 
+// TestSignExistingCmd 签署既有 PDF（-in）：无签名占位符的文档增量追加签署。
+func TestSignExistingCmd(t *testing.T) {
+	dir := t.TempDir()
+	// 先造一份无签名字段的既有 PDF（本库生成；第三方产物由 sign 包单测覆盖）
+	base := filepath.Join(dir, "base.pdf")
+	if err := cmdText([]string{"-o", base, filepath.Join("..", "..", "dev.md")}); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(dir, "signed.pdf")
+	if err := cmdSign([]string{"-in", base, "-o", out, "-selfsign", "既有文档签署",
+		"-rect", "350,100,560,160", "-signer-name", "Existing Signer"}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := sign.Verify(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Valid {
+		t.Errorf("既有文档签名校验失败: %s", res.Message)
+	}
+	// 既有字节不被改动（增量修订）
+	orig, _ := os.ReadFile(base)
+	if len(data) <= len(orig) || string(data[:len(orig)]) != string(orig) {
+		t.Error("签署既有文档应为纯增量追加")
+	}
+}
+
 // TestMultiSignCmd 多重签名 CLI：-multi 3 依次会签 → verify 逐个校验通过。
 func TestMultiSignCmd(t *testing.T) {
 	dir := t.TempDir()

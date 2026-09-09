@@ -213,10 +213,15 @@ func TestTimestamp(t *testing.T) {
 		os.WriteFile(tokenPath, token, 0644)
 		os.WriteFile(filepath.Join(dir, "tsa.pem"), sign.MarshalCertPEM(tsaCert), 0644)
 
-		out, err := exec.Command("openssl", "ts", "-verify",
+		// Windows 下部分 openssl 发行版默认配置路径不存在，显式置空
+		emptyCnf := filepath.Join(dir, "openssl.cnf")
+		os.WriteFile(emptyCnf, []byte{}, 0644)
+		cmd := exec.Command("openssl", "ts", "-verify",
 			"-digest", hex.EncodeToString(imprint),
 			"-token_in", "-in", tokenPath,
-			"-CAfile", filepath.Join(dir, "tsa.pem")).CombinedOutput()
+			"-CAfile", filepath.Join(dir, "tsa.pem"))
+		cmd.Env = append(os.Environ(), "OPENSSL_CONF="+emptyCnf)
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("openssl ts -verify 失败: %v\n%s", err, out)
 		}

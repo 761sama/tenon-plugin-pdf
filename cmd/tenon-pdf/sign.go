@@ -19,6 +19,7 @@ import (
 func cmdSign(args []string) error {
 	fs := flag.NewFlagSet("sign", flag.ExitOnError)
 	out := fs.String("o", "signed-demo.pdf", "输出文件")
+	in := fs.String("in", "", "签署既有 PDF 文件（含第三方生成；为空则生成演示文档）")
 	certPath := fs.String("cert", "", "PEM 证书路径（缺省自动生成自签名证书）")
 	keyPath := fs.String("key", "", "PEM 私钥路径")
 	selfSign := fs.String("selfsign", "", "生成自签名证书的 CN（缺省 demo signer）")
@@ -79,18 +80,6 @@ func cmdSign(args []string) error {
 			sigField.SignerName = cert.Subject.CommonName
 		}
 	}
-	doc.SetSignature(sigField)
-	if *user != "" || *owner != "" {
-		level := security.AES128
-		if *aes256 {
-			level = security.AES256
-		}
-		doc.SetEncryption(security.Options{
-			UserPassword:  *user,
-			OwnerPassword: *owner,
-			Level:         level,
-		})
-	}
 
 	signOpts := sign.Options{Signer: key, Certificate: cert}
 	for _, cp := range chainPaths {
@@ -106,6 +95,43 @@ func cmdSign(args []string) error {
 	}
 	if *tsaURL != "" {
 		signOpts.TSA = &sign.TSAOptions{URL: *tsaURL}
+	}
+
+	// -in：签署既有 PDF（含第三方生成），增量修订追加签名字段
+	if *in != "" {
+		if *user != "" || *owner != "" || *dss {
+			return fmt.Errorf("-in 模式不支持加密与 DSS（既有文档不重写）")
+		}
+		data, err := os.ReadFile(*in)
+		if err != nil {
+			return err
+		}
+		signed, err := sign.SignExisting(data, sigField, signOpts)
+		if err != nil {
+			return err
+		}
+		for i := 2; i <= *multi; i++ {
+			signed, err = sign.SignExisting(signed, &sign.Field{Reason: fmt.Sprintf("会签人 %d", i)},
+				sign.Options{Signer: key, Certificate: cert})
+			if err != nil {
+				return err
+			}
+			fmt.Printf("会签人 %d 已签署\n", i)
+		}
+		return os.WriteFile(*out, signed, 0644)
+	}
+
+	doc.SetSignature(sigField)
+	if *user != "" || *owner != "" {
+		level := security.AES128
+		if *aes256 {
+			level = security.AES256
+		}
+		doc.SetEncryption(security.Options{
+			UserPassword:  *user,
+			OwnerPassword: *owner,
+			Level:         level,
+		})
 	}
 
 	// DSS（LTV 证书部分）须在序列化前嵌入

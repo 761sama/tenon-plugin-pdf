@@ -221,8 +221,16 @@ GPOS 型字距未实现（需完整特性/脚本/定位规则解析，复杂度�
 （会签）走标准增量更新（§7.5.6）：`sign.AppendSignatureField` 在文件末尾
 追加修订段（新字段部件对象 + 重定义 AcroForm/页面 /Annots + xref 子段 +
 trailer /Prev），既有字节一概不动，前序签名保持有效。为此增量路径内置了一套
-最小字节级解析（trailer/对象体/数组引用），仅限本库自身生成的文件布局。
-VerifyAll 按 /ByteRange 出现顺序逐个校验，非末位签名只覆盖到其修订末尾属正常。
+最小字节级解析（trailer/对象体/数组引用）。VerifyAll 按 /ByteRange 出现顺序
+逐个校验，非末位签名只覆盖到其修订末尾属正常。
+
+**第三方既有 PDF 签署**：增量修订机制与文档来源无关——`AppendSignatureField`
+已泛化为支持任意经典 xref 表布局的 PDF：Catalog 无 AcroForm 时新建
+`/AcroForm << /Fields [..] /SigFlags 3 >>` 并重定义 Catalog（AcroForm 为内联
+字典时原地插入字段引用）；页树支持嵌套 Pages 节点遍历定位目标页
+（`findPage` DFS）。`sign.SignExisting` = AppendSignatureField + Sign 一步完成。
+签名值字典 /V 一律写为**间接对象**（本库生成路径同样如此）——部分验证器
+（如 pyhanko）不接受内联 /V。
 
 **时间戳（RFC 3161）**：`Options.TSA` 配置后，Sign 对签名值取 SHA-256 作为
 messageImprint 向 TSA 请求令牌，作为 signature-time-stamp 未认证属性
@@ -248,8 +256,9 @@ signingCertificateV2 属性——openssl ts -verify 强制要求。未认证属�
 CRL/OCSP 的获取（CA 应答）与签署后增量追加留给调用方。
 
 **取舍**：
-- 增量更新的通用解析器不做（仅识别本库生成布局）；不能签署第三方既有 PDF。
-- 加密文档不支持增量多重签名（追加对象需持文件密钥加密）。
+- 增量解析器为最小字节级实现：仅支持经典交叉引用表布局（trailer 字典），
+  纯 xref 流 / 对象流（ObjStm）布局的第三方文档报明确错误，不做通用解析器。
+- 加密文档不支持增量追加签名字段（追加对象需持文件密钥加密）。
 - 占位空间固定 16KB，超大证书链需调库常量。
 
 ### 3.5 加密（security/）

@@ -245,7 +245,7 @@ func (d *Document) WriteTo(out io.Writer) (int64, error) {
 	var acroFormRef object.Ref
 
 	// 4.1 数字签名字段（多重签名/会签）：
-	// 第一个字段内嵌 /V 占位符（sign.Sign 两遍回填，原地签署）；
+	// 第一个字段写入带 /V 占位符的签名值字典（间接对象，sign.Sign 两遍回填）；
 	// 其余字段生成无 /V 的未签名空字段——后续签署用 sign.AppendSignatureField
 	// 追加增量修订（不改动既有字节），保证前序签名的覆盖区不变。
 	var sigRefs []object.Ref
@@ -289,7 +289,8 @@ func (d *Document) WriteTo(out io.Writer) (int64, error) {
 			if s.Contact != "" {
 				v.Set("ContactInfo", object.TextStr(s.Contact))
 			}
-			widget.Set("V", v)
+			// /V 为间接引用（部分验证器如 pyhanko 不接受内联签名值字典）
+			widget.Set("V", w.Add(v))
 		}
 		sigRef := w.Add(widget)
 		sigRefs = append(sigRefs, sigRef)

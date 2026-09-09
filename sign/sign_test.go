@@ -149,7 +149,7 @@ open(sys.argv[3], 'wb').write(bytes.fromhex(sig.decode()))
 		t.Fatalf("提取失败: %v %s", err, out)
 	}
 	out, err := exec.Command("openssl", "cms", "-verify", "-inform", "DER",
-		"-in", sigDer, "-content", content, "-noverify", "-binary", "-out", "/dev/null").CombinedOutput()
+		"-in", sigDer, "-content", content, "-noverify", "-binary", "-out", os.DevNull).CombinedOutput()
 	if err != nil {
 		t.Fatalf("openssl 验签失败: %v\n%s", err, out)
 	}

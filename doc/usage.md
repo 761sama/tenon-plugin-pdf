@@ -47,7 +47,7 @@ err := doc.SaveFile("out.pdf")
 | `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行）、边框、跨页重复表头、表头行/单元格颜色覆盖 |
 | `jsongen` | 从 JSON 描述生成 PDF（格式见 `doc/json-format.md`）；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）加密；公钥证书加密（PubSec，多收件人） |
-| `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、验签、证书链验证、RFC 3161 时间戳、多重签名（增量会签）、自签名/链式证书 |
+| `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、验签、证书链验证、RFC 3161 时间戳、多重签名（增量会签）、第三方既有 PDF 签署、自签名/链式证书 |
 | `pdf`（根包） | Document 门面：聚合各组件并序列化完整文件 |
 
 ### 表格（table 包）
@@ -174,6 +174,17 @@ res, _ := sign.Verify(signed)
 res.Valid // true；篡改任意字节后为 false
 ```
 
+签署第三方既有 PDF（不经过本库生成、无签名占位符）：
+
+```go
+data, _ := os.ReadFile("third-party.pdf")          // 任意来源的既有 PDF
+signed, _ := sign.SignExisting(data,               // 增量追加签名字段并签署
+    &sign.Field{Reason: "合同审批"},               // field 传 nil 亦可
+    sign.Options{Signer: key, Certificate: cert})
+// 既有字节一概不动（标准增量修订）；可见签名用 Field.Rect 指定
+// 限制：经典交叉引用表布局（非纯 xref 流/对象流）、未加密
+```
+
 证书链、时间戳、多重签名、可见签名与 LTV：
 
 ```go
@@ -219,6 +230,7 @@ doc.SetDSS(pdf.DSSData{
 ```
 
 > 边界：可见签名外观文本限 WinAnsi 字符（中文等显示为 '?'）；
+> 第三方 PDF 签署不支持纯 xref 流/对象流布局与加密文档（增量解析器为最小字节级实现）；
 > 加密文档不支持增量多重签名（追加修订段需持文件密钥加密）；
 > LTV 中 CRL/OCSP 的在线获取由调用方负责。
 
@@ -288,6 +300,8 @@ tenon-pdf json -o out.pdf data/contract.json \         # 从 JSON 描述生成 P
 tenon-pdf encrypt -o enc.pdf -user u123 -owner o456 -aes256 -no-copy
 tenon-pdf encrypt -o enc.pdf -recip alice.pem -recip bob.pem # 公钥证书加密
 tenon-pdf sign -o signed.pdf -selfsign "张三" -reason "合同审批"
+tenon-pdf sign -in contract.pdf -o signed.pdf -selfsign "张三"  # 签署既有/第三方 PDF
+tenon-pdf sign -in contract.pdf -o s.pdf -selfsign A -rect 350,100,560,160  # 第三方+可见签名
 tenon-pdf sign -o s.pdf -selfsign A -rect 350,100,560,160   # 可见签名
 tenon-pdf sign -o s.pdf -selfsign A -tsa http://tsa.example # RFC 3161 时间戳
 tenon-pdf sign -o s.pdf -selfsign A -chain ca.pem -dss      # 证书链 + DSS（LTV）

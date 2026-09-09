@@ -151,7 +151,7 @@ open(sys.argv[3], 'wb').write(bytes.fromhex(sig.decode()))
 		// 带 CAfile 全链验证（不再 -noverify）：CMS 内嵌的中间证书参与构链
 		out, err := exec.Command("openssl", "cms", "-verify", "-inform", "DER",
 			"-in", sigDer, "-content", content, "-binary", "-purpose", "any",
-			"-CAfile", filepath.Join(dir, "root.pem"), "-out", "/dev/null").CombinedOutput()
+			"-CAfile", filepath.Join(dir, "root.pem"), "-out", os.DevNull).CombinedOutput()
 		if err != nil {
 			t.Fatalf("openssl 链式验签失败: %v\n%s", err, out)
 		}

@@ -31,7 +31,7 @@ func Sign(doc []byte, opts Options) ([]byte, error) {
 	contentsPh := ContentsPlaceholder()
 	ci := bytes.Index(doc, []byte(contentsPh))
 	if ci < 0 {
-		return nil, fmt.Errorf("sign: 文档中未找到签名占位符（需先用 SetSignature）")
+		return nil, fmt.Errorf("sign: 文档中未找到签名占位符（本库文档用 SetSignature；第三方既有 PDF 请用 SignExisting 或先 AppendSignatureField）")
 	}
 	bi := bytes.Index(doc, []byte(ByteRangePlaceholder))
 	if bi < 0 {

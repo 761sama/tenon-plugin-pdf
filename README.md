@@ -26,7 +26,7 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 | `form` | AcroForm 交互表单：文本域、复选框 |
 | `table` | 表格：定宽/均分/内容自适应列宽、灰底加粗表头、单元格合并（跨列/跨行）、边框内边距、跨页自动重复表头 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）；公钥证书加密（PubSec，多收件人、每收件人独立权限） |
-| `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、RFC 3161 时间戳、证书链验证、多重签名（增量修订）、验签、自签名/链式证书 |
+| `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、RFC 3161 时间戳、证书链验证、多重签名（增量修订）、第三方既有 PDF 签署、验签、自签名/链式证书 |
 
 ## 安装与导入
 
@@ -219,6 +219,12 @@ doc.SetSignature(&sign.Field{
 
 // LTV：DSS 字典嵌入验证材料（证书链 + CRL + OCSP 响应）
 doc.SetDSS(pdf.DSSData{Certs: chain, CRLs: crlDERs, OCSPs: ocspDERs})
+
+// 签署第三方既有 PDF（任意来源、无占位符）：增量修订追加签名字段后签署，
+// 既有字节不动；限经典 xref 表布局、未加密文档
+data, _ := os.ReadFile("third-party.pdf")
+signed, _ = sign.SignExisting(data, &sign.Field{Reason: "合同审批"},
+    sign.Options{Signer: key, Certificate: cert})
 ```
 
 ## 命令行工具
@@ -240,6 +246,7 @@ tenon-pdf encrypt [-o out.pdf] [-user PW] [-owner PW] [-aes256]
               [-no-copy] [-no-print] [-no-modify] [-no-annotate]
               [-recip 收件人证书.pem]...                加密演示（密码或公钥证书 PubSec）
 tenon-pdf sign [-o out.pdf] [-cert c.pem -key k.pem | -selfsign CN]
+              [-in 既有.pdf]                              签署第三方/既有 PDF（增量修订）
               [-reason R] [-location L] [-ecdsa] [-save-keys 前缀]
               [-user PW] [-owner PW] [-aes256]          与加密组合
               [-chain ca.pem]... [-root 见 verify]      嵌入中间证书链
@@ -280,8 +287,8 @@ pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
   超出范围
 - **加密**：不支持 RC4 内容加密（V1–V3，纯遗留）；PubSec 仅支持 RSA 收件人证书；
   加密文档不支持增量多重签名（追加修订段需持文件密钥加密）
-- **签名**：签名必须由本库生成的文档发起（占位符/增量修订机制），不能签署第三方
-  既有 PDF；LTV 中 CRL/OCSP 的在线获取与签署后增量追加由调用方负责；
+- **签名**：第三方既有 PDF 签署限经典交叉引用表布局（纯 xref 流/对象流不支持）、
+  未加密文档；LTV 中 CRL/OCSP 的在线获取与签署后增量追加由调用方负责；
   可见签名外观文本限 WinAnsi 字符（非 ASCII 显示为 '?'）；
   签名占位空间固定 16KB（超大证书链需调库常量）
 - **PDF/A、PDF/X、PDF/UA** 合规性与标记 PDF（Tagged PDF）
