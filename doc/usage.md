@@ -44,7 +44,7 @@ err := doc.SaveFile("out.pdf")
 | `outline` | 书签大纲（多级、加粗/斜体/颜色、折叠） |
 | `metadata` | 文档信息字典 + XMP 元数据流 |
 | `form` | AcroForm 交互表单：文本域、复选框 |
-| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行）、边框、跨页重复表头、表头行/单元格颜色覆盖 |
+| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行，含表头行）、边框、跨页重复表头、超高行/跨行块跨页拆分、表头行/单元格颜色覆盖 |
 | `jsongen` | 从 JSON 描述生成 PDF（格式见 `doc/json-format.md`）；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）加密；公钥证书加密（PubSec，多收件人） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、验签、证书链验证、RFC 3161 时间戳、多重签名（增量会签）、第三方既有 PDF 签署、自签名/链式证书 |
@@ -74,7 +74,18 @@ tbl.AutoWidth = true // Width 为 0 的列按内容测算（定宽列不变）
 tbl.AddRowCells(table.C("Materials").Span(1, 2), table.C("Steel"), table.C("1000.00"))
 tbl.AddRowCells(table.C("Cement"), table.C("500.00"))  // 被覆盖列自动跳过
 tbl.AddRowCells(table.C("TOTAL").Span(2, 1), table.C("1500.00")) // 跨列
-// 跨行合并块分页时整体移动，不会拆到两页
+// 跨行合并块放得下时整体移动不拆页；超过整页可用高度时自动拆分续页，
+// 文本行不切断、不丢失
+```
+
+表头行合并（`HeaderRows` 声明的表头行内用法与数据行一致）：
+
+```go
+tbl := table.New(table.Column{Width: 90}, table.Column{Width: 130}, table.Column{Width: 130})
+tbl.HeaderRows = 2 // 前 2 行作为表头（跨页重复）
+tbl.AddRowCells(table.C("GroupAB").Span(2, 1), table.C("GroupC").Span(1, 2)) // 跨列+跨行
+tbl.AddRowCells(table.C("sub-a"), table.C("sub-b"))                          // C 列被占用跳过
+// 表头跨行不越过表头区（超出自动截断到 HeaderRows 边界）
 ```
 
 ### 中文 / CJK 字体（font.CJKFont）

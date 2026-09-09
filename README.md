@@ -24,7 +24,7 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 | `outline` | 书签大纲（多级、加粗/斜体/颜色、折叠） |
 | `metadata` | 文档信息字典 + XMP 元数据流 |
 | `form` | AcroForm 交互表单：文本域、复选框 |
-| `table` | 表格：定宽/均分/内容自适应列宽、灰底加粗表头、单元格合并（跨列/跨行）、边框内边距、跨页自动重复表头 |
+| `table` | 表格：定宽/均分/内容自适应列宽、灰底加粗表头、单元格合并（跨列/跨行，含表头行）、边框内边距、跨页自动重复表头、超高行/跨行块跨页拆分 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）；公钥证书加密（PubSec，多收件人、每收件人独立权限） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、RFC 3161 时间戳、证书链验证、多重签名（增量修订）、第三方既有 PDF 签署、验签、自签名/链式证书 |
 
@@ -114,6 +114,16 @@ tbl.AddRowCells(table.C("Cement"), table.C("500.00"))
 tbl.AddRowCells(table.C("TOTAL").Span(2, 1), table.C("1500.00"))
 
 tbl.Draw(p, 50, 700, 495, 60, newPage)
+```
+
+表头行合并（`HeaderRows` 表头内 `Span` 用法与数据行一致）与超高行拆分：
+
+```go
+tbl := table.New(table.Column{Width: 90}, table.Column{Width: 130}, table.Column{Width: 130})
+tbl.HeaderRows = 2 // 前 2 行为表头，跨页自动重复
+tbl.AddRowCells(table.C("GroupAB").Span(2, 1), table.C("GroupC").Span(1, 2))
+tbl.AddRowCells(table.C("sub-a"), table.C("sub-b"))
+// 超高行/跨行块超过整页可用高度时自动拆分续页：文本行不切断、不丢失
 ```
 
 ### 中文（CJK 嵌入字体）
@@ -278,7 +288,7 @@ pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
 ## 已知限制
 
 - **表格**：合并仅支持矩形区域（ColSpan×RowSpan），超出列数/行数自动截断；
-  表头行本身不支持合并；超高行/跨行块（超过整页）直接溢出绘制不拆分；
+  表头行合并的跨行不越过表头区（自动截断）；表头块本身超过整页时仍溢出绘制；
   自适应列宽按比例压缩时不低于最长单词宽（极端窄表仍可能溢出）
 - **字体**：仅支持 glyf 轮廓的 TrueType 子集嵌入（TTF 及 TTC 集合成员）；
   OTF/CFF（CIDFontType0）、变量字体实例化（需先用 fonttools 等工具静态化）、

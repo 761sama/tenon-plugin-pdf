@@ -7,6 +7,8 @@
 package table
 
 import (
+	"math"
+
 	"gopkg.761sama.com/tenon-plugin-pdf/color"
 	"gopkg.761sama.com/tenon-plugin-pdf/font"
 	"gopkg.761sama.com/tenon-plugin-pdf/page"
@@ -69,7 +71,9 @@ type Table struct {
 
 	// HeaderRows 将 Rows 前 N 行作为表头行（底色 HeaderBg，跨页随 HeaderRepeat 重复）。
 	// 与 Column.Title 表头互斥：HeaderRows > 0 时忽略列标题。
-	// 表头行走正常单元格排版（支持多行文本与 Cell 覆盖），适合复杂表头。
+	// 表头行走正常单元格排版（支持多行文本与 Cell 覆盖），适合复杂表头；
+	// 表头行支持单元格合并（Span，用法与数据行一致），
+	// 但跨行不越过表头区（超出自动截断到 HeaderRows 边界）。
 	HeaderRows int
 
 	TextColor   color.Color // 内容文本色，默认黑
@@ -302,6 +306,9 @@ func (t *Table) resolveGrid() ([][]placedCell, []bool) {
 			if r+rs > nRow {
 				rs = nRow - r // 截断到行数
 			}
+			if hdr := t.headerRowCount(); r < hdr && rs > hdr-r {
+				rs = hdr - r // 表头行跨行不越过表头区
+			}
 			pc := placedCell{Cell: cell, row: r, col: col}
 			pc.ColSpan, pc.RowSpan = cs, rs // 截断后的跨度
 			grid[r] = append(grid[r], pc)
@@ -322,7 +329,9 @@ func (t *Table) resolveGrid() ([][]placedCell, []bool) {
 // Draw 从 (x, yTop) 开始绘制表格，yTop 为表格上边缘，bottomY 为页底边界。
 // 空间不足且 newPage 非 nil 时，调用 newPage 获取新页与续页起始 y 并继续绘制
 // （HeaderRepeat 为 true 时自动重绘表头）；newPage 为 nil 则超出边界继续绘制。
-// 跨行合并块不会被拆分到两页：放不下时整块移至下一页（块比页还高则溢出绘制）。
+// 跨行合并块优先整体移动：放得下时不拆到两页；
+// 块（或单行）超过整页可用高度时按行边界拆分绘制，单行仍超高时按文本行拆分，
+// 内容连续、不溢出、不丢失（newPage 为 nil 时退化为溢出绘制）。
 // 返回结束时所在页与结束 y（表格下边缘）。
 func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (*page.Page, float64)) (*page.Page, float64) {
 	grid, breakBefore := t.resolveGrid()
@@ -338,18 +347,13 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 		headerH = t.headerHeight()
 	}
 
-	// 分页布局：把内容行分配到各页（跨行块整体移动）
-	type pageRun struct {
-		page       *page.Page
-		top        float64
-		start, end int // 行区间 [start, end)
-	}
-	runs := []pageRun{{page: p, top: yTop, start: headerRows}}
+	// 分页布局：把内容行分配到各页（跨行块优先整体移动，超页则窗口化拆分）
+	runs := []pageRun{}
+	cur := pageRun{page: p, top: yTop, start: headerRows}
 	y := yTop - headerH
 	for i := headerRows; i < len(heights); i++ {
 		h := heights[i]
-		cur := &runs[len(runs)-1]
-		if y-h < bottomY && newPage != nil && i > cur.start {
+		if y-h < bottomY && newPage != nil {
 			// 当前页放不下 → 找安全分页边界（回溯跨行块起点）
 			j := i
 			for j > cur.start && !breakBefore[j] {
@@ -358,29 +362,179 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 			if j > cur.start {
 				// 在行 j 前分页：j..i-1 行移至新页
 				cur.end = j
+				runs = append(runs, cur)
 				np, ntop := newPage()
-				runs = append(runs, pageRun{page: np, top: ntop, start: j})
+				cur = pageRun{page: np, top: ntop, start: j}
 				y = ntop - headerH
 				for k := j; k < i; k++ {
 					y -= heights[k]
 				}
+			} else {
+				// 不可分页块超过整页可用高度：窗口化拆分绘制
+				be := cur.start + 1
+				for be < len(heights) && !breakBefore[be] {
+					be++
+				}
+				cur, y = t.splitRuns(&runs, cur, be, heights, grid, widths, headerH, bottomY, newPage)
+				i = be - 1 // 循环末尾 i++，从块后第一行继续
+				continue
 			}
-			// j == cur.start：跨行块超过整页，溢出绘制
 		}
 		y -= h
-		runs[len(runs)-1].end = i + 1
+		cur.end = i + 1
 	}
+	runs = append(runs, cur)
 
 	// 逐页渲染
 	for _, run := range runs {
-		t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, headerRows, run.start, run.end)
+		if run.split {
+			t.renderSplitRun(run.page, x, run.top, widths, heights, grid, headerH, headerRows, run.start, run.end, run.wTop, run.wBot)
+		} else {
+			t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, headerRows, run.start, run.end)
+		}
 	}
 	last := runs[len(runs)-1]
 	endY := last.top - headerH
-	for r := last.start; r < last.end; r++ {
-		endY -= heights[r]
+	if last.split {
+		endY -= last.wBot - last.wTop
+	} else {
+		for r := last.start; r < last.end; r++ {
+			endY -= heights[r]
+		}
 	}
 	return last.page, endY
+}
+
+// splitRuns 把超过整页可用高度的不可分页块 [cur.start, be) 拆分为若干窗口片段
+// 追加到 runs，返回块后行继续绘制所用的 run 与当前 y。
+// 窗口边界优先吸附到行边界；单行仍超页时吸附到文本行边界；都不行则硬切。
+func (t *Table) splitRuns(runs *[]pageRun, cur pageRun, be int, heights []float64,
+	grid [][]placedCell, widths []float64, headerH, bottomY float64,
+	newPage func() (*page.Page, float64)) (pageRun, float64) {
+
+	bs := cur.start
+	// 块内累计高度（相对块起点）
+	cum := make([]float64, be-bs+1)
+	for r := bs; r < be; r++ {
+		cum[r-bs+1] = cum[r-bs] + heights[r]
+	}
+	total := cum[be-bs]
+
+	pg, ptop := cur.page, cur.top
+	avail := ptop - headerH - bottomY
+	wTop := 0.0
+	for wTop < total {
+		if avail <= 0 {
+			avail = 1 // 防御：保证必然前进
+		}
+		limit := wTop + avail
+		wBot := limit
+		if wBot >= total {
+			wBot = total
+		} else if b := t.cleanCut(grid, widths, heights, bs, be, wTop, limit); b > wTop {
+			wBot = b // 吸附到不切断任何文本行的边界
+		}
+		*runs = append(*runs, pageRun{page: pg, top: ptop, start: bs, end: be, split: true, wTop: wTop, wBot: wBot})
+		wTop = wBot
+		if wTop < total {
+			pg, ptop = newPage()
+			avail = ptop - headerH - bottomY
+		}
+	}
+	// 块后行从最后一个拆分页继续
+	next := pageRun{page: pg, top: ptop, start: be}
+	return next, ptop - headerH - (total - wTopOfLast(*runs))
+}
+
+// wTopOfLast 返回 runs 末个（拆分）run 的窗口起点。
+func wTopOfLast(runs []pageRun) float64 { return runs[len(runs)-1].wTop }
+
+// cleanCut 在 (wTop, limit] 内寻找不切断任何单元格文本行的最大拆分点：
+// 候选为行边界与所有单元格的文本行边界（行框顶部的块内坐标）；
+// 候选点落在某单元格内部时，必须避开其文本行内部（在行边界上或文本区之外）。
+// 找不到干净切点时返回 0（调用方退化为硬切，由渲染期裁剪兜底）。
+func (t *Table) cleanCut(grid [][]placedCell, widths, heights []float64,
+	bs, be int, wTop, limit float64) float64 {
+	cum := make([]float64, be-bs+1)
+	for r := bs; r < be; r++ {
+		cum[r-bs+1] = cum[r-bs] + heights[r]
+	}
+	type cellSpan struct {
+		ct, cb    float64 // 单元格纵向范围
+		hasText   bool
+		textStart float64 // 首行行框顶部
+		textEnd   float64 // 末行行框底部
+		leading   float64 // 行距
+	}
+	var cells []cellSpan
+	var cands []float64
+	for r := bs; r < be; r++ {
+		for _, c := range grid[r] {
+			ct := cum[c.row-bs]
+			cb := ct
+			for rr := c.row; rr < c.row+c.RowSpan; rr++ {
+				cb += heights[rr]
+			}
+			if cb <= wTop || ct >= limit {
+				continue // 与窗口无关的单元格
+			}
+			cs := cellSpan{ct: ct, cb: cb}
+			if c.Text != "" {
+				_, _, leading, lines, voff := t.cellText(c, spanWidth(widths, c.col, c.ColSpan), cb-ct, false)
+				cs.hasText = true
+				cs.textStart = ct + voff
+				cs.leading = leading
+				cs.textEnd = ct + voff + float64(len(lines))*leading
+				for k := 1; k <= len(lines); k++ {
+					if b := ct + voff + float64(k)*leading; b > wTop && b <= limit {
+						cands = append(cands, b)
+					}
+				}
+			}
+			cells = append(cells, cs)
+		}
+	}
+	// 行边界也是候选
+	for _, b := range cum[1 : len(cum)-1] {
+		if b > wTop && b <= limit {
+			cands = append(cands, b)
+		}
+	}
+	sortFloatsDesc(cands)
+	const eps = 1e-4
+	for _, p := range cands {
+		clean := true
+		for _, cs := range cells {
+			if p <= cs.ct+eps || p >= cs.cb-eps {
+				continue // 不在单元格内部
+			}
+			if !cs.hasText {
+				continue // 空单元格
+			}
+			if p <= cs.textStart+eps || p >= cs.textEnd-eps {
+				continue // 文本区之外（内边距区）
+			}
+			// 文本区内部：必须恰好落在某条文本行边界上
+			k := (p - cs.textStart) / cs.leading
+			if d := k - math.Round(k); d > eps || d < -eps {
+				clean = false // 切断文本行
+				break
+			}
+		}
+		if clean {
+			return p
+		}
+	}
+	return 0
+}
+
+// sortFloatsDesc 降序插入排序（候选数量有限）。
+func sortFloatsDesc(a []float64) {
+	for i := 1; i < len(a); i++ {
+		for j := i; j > 0 && a[j] > a[j-1]; j-- {
+			a[j], a[j-1] = a[j-1], a[j]
+		}
+	}
 }
 
 // breakStart 返回覆盖第 j 行的跨行块的起始行。
@@ -458,6 +612,37 @@ func spanWidth(widths []float64, col, span int) float64 {
 	return w
 }
 
+// pageRun 一页的绘制任务：普通模式渲染行区间 [start, end)；
+// split 模式渲染拆分块 [start, end) 中落在窗口 [wTop, wBot) 内的片段
+// （窗口坐标为相对 start 行起点的累计高度）。
+type pageRun struct {
+	page       *page.Page
+	top        float64
+	start, end int
+	split      bool
+	wTop, wBot float64
+}
+
+// cellText 布局单元格文本：返回字体、字号、行距、换行结果与
+// 首行行框顶部相对单元格顶部的偏移（跨行单元格与表头行垂直居中，其余顶对齐）。
+func (t *Table) cellText(c placedCell, w, ch float64, header bool) (font.Resource, float64, float64, []string, float64) {
+	f, size, pad := t.bodyFont(), t.fontSize(), t.padding()
+	if c.Font != nil {
+		f = c.Font
+	}
+	if c.Size > 0 {
+		size = c.Size
+	}
+	leading := f.LineHeight(size)
+	lines := text.Wrap(f, size, w-2*pad, c.Text)
+	textH := float64(len(lines)) * leading
+	voff := pad
+	if (c.RowSpan > 1 || header) && textH+2*pad < ch {
+		voff = pad + (ch-2*pad-textH)/2
+	}
+	return f, size, leading, lines, voff
+}
+
 // renderRun 渲染一页：表头（表头行或列标题）+ [start, end) 内容行。
 func (t *Table) renderRun(p *page.Page, x, top, w float64, widths, heights []float64,
 	grid [][]placedCell, headerH float64, headerRows, start, end int) {
@@ -486,14 +671,6 @@ func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float
 		}
 		// 底色、边框与文本（按单元格，含合并区）
 		for _, c := range grid[r] {
-			f, size := t.bodyFont(), t.fontSize()
-			if c.Font != nil {
-				f = c.Font
-			}
-			if c.Size > 0 {
-				size = c.Size
-			}
-			leading := f.LineHeight(size)
 			cx := x + spanWidth(widths, 0, c.col)
 			cw := spanWidth(widths, c.col, c.ColSpan)
 			ch := 0.0
@@ -521,13 +698,7 @@ func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float
 						txtColor = t.textColor()
 					}
 				}
-				lines := text.Wrap(f, size, cw-2*pad, c.Text)
-				textH := float64(len(lines)) * leading
-				// 跨行单元格与表头行垂直居中，其余顶对齐
-				voff := pad
-				if (c.RowSpan > 1 || header) && textH+2*pad < ch {
-					voff = pad + (ch-2*pad-textH)/2
-				}
+				f, size, leading, lines, voff := t.cellText(c, cw, ch, header)
 				ty := y - voff - f.Ascent(size)
 				align := t.Columns[c.col].Align
 				if c.Align != nil {
@@ -543,6 +714,109 @@ func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float
 		}
 		y -= rh
 	}
+}
+
+// renderSplitRun 渲染拆分块的一个窗口片段：表头 + 块 [start, end) 中
+// 落在窗口 [wTop, wBot) 内的部分。单元格背景/边框按可见片段绘制；
+// 文本行按行框顶部归属窗口（每行只在一页输出），并以片段矩形裁剪防溢出。
+func (t *Table) renderSplitRun(p *page.Page, x, top float64, widths, heights []float64,
+	grid [][]placedCell, headerH float64, headerRows, start, end int, wTop, wBot float64) {
+	y := top
+	if headerRows > 0 {
+		t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
+		y -= headerH
+	} else if headerH > 0 {
+		t.renderHeader(p, x, y, spanWidth(widths, 0, len(widths)), widths, headerH)
+		y -= headerH
+	}
+	pad := t.padding()
+
+	// 块内累计高度（相对块起点）
+	cum := make([]float64, end-start+1)
+	for r := start; r < end; r++ {
+		cum[r-start+1] = cum[r-start] + heights[r]
+	}
+	// pageY 把块内坐标 c 映射为页面 y（片段上边缘）
+	pageY := func(c float64) float64 { return y - (c - wTop) }
+	totalW := spanWidth(widths, 0, len(widths))
+
+	// 行底色片段
+	if t.RowBg != nil {
+		for r := start; r < end; r++ {
+			vt := maxF(cum[r-start], wTop)
+			vb := minF(cum[r-start+1], wBot)
+			if vb <= vt {
+				continue
+			}
+			p.Save().SetFillColor(t.RowBg)
+			p.FillRect(x, pageY(vb), totalW, vb-vt)
+			p.Restore()
+		}
+	}
+
+	// 单元格片段（含跨行合并区）
+	for r := start; r < end; r++ {
+		for _, c := range grid[r] {
+			ct := cum[c.row-start]
+			cb := ct
+			for rr := c.row; rr < c.row+c.RowSpan; rr++ {
+				cb += heights[rr]
+			}
+			vt := maxF(ct, wTop)
+			vb := minF(cb, wBot)
+			if vb <= vt {
+				continue
+			}
+			cx := x + spanWidth(widths, 0, c.col)
+			cw := spanWidth(widths, c.col, c.ColSpan)
+			if c.Bg != nil {
+				p.Save().SetFillColor(c.Bg)
+				p.FillRect(cx, pageY(vb), cw, vb-vt)
+				p.Restore()
+			}
+			p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
+			p.StrokeRect(cx, pageY(vb), cw, vb-vt)
+			p.Restore()
+			if c.Text == "" {
+				continue
+			}
+			txtColor := c.Color
+			if txtColor == nil {
+				txtColor = t.textColor()
+			}
+			f, size, leading, lines, voff := t.cellText(c, cw, cb-ct, false)
+			align := t.Columns[c.col].Align
+			if c.Align != nil {
+				align = *c.Align
+			}
+			p.Save()
+			p.Content.Rect(cx, pageY(vb), cw, vb-vt).Clip().EndPath()
+			p.SetFillColor(txtColor)
+			for k, line := range lines {
+				lineTop := ct + voff + float64(k)*leading
+				if lineTop < wTop || lineTop >= wBot {
+					continue // 该行归属其它片段页
+				}
+				xoff := text.OffsetX(f, size, cw-2*pad, line, align)
+				p.DrawText(f, size, cx+pad+xoff, pageY(lineTop)-f.Ascent(size), line)
+			}
+			p.Restore()
+		}
+	}
+}
+
+func maxF(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minF(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // renderHeader 渲染表头行（灰底、加粗、居中）。
