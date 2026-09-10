@@ -139,9 +139,14 @@ m = re.search(rb'/ByteRange \[(\d+) (\d+) (\d+) (\d+)\]', d)
 a, b, c, l = int(m[1]), int(m[2]), int(m[3]), int(m[4])
 open(sys.argv[2], 'wb').write(d[a:a+b] + d[c:c+l])
 m2 = re.search(rb'/Contents <([0-9A-Fa-f]+)>', d[m.end():])
-sig = m2[1].rstrip(b'0')
-if len(sig) % 2: sig += b'0'
-open(sys.argv[3], 'wb').write(bytes.fromhex(sig.decode()))
+raw = bytes.fromhex(m2[1].decode())
+# 按 DER 首 TLV 长度截取（尾部是占位符补零，不能 rstrip '0'）
+i, ln = 2, raw[1]
+if ln & 0x80:
+    n = ln & 0x7f
+    ln = int.from_bytes(raw[2:2+n], 'big')
+    i = 2 + n
+open(sys.argv[3], 'wb').write(raw[:i+ln])
 `
 		content := filepath.Join(dir, "content.bin")
 		sigDer := filepath.Join(dir, "sig.der")

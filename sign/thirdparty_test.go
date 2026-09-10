@@ -56,7 +56,7 @@ func thirdPartyObjs() map[int]string {
 		1: "<< /Type /Catalog /Pages 2 0 R >>",
 		2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
 		3: "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
-			"/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>" +
+			"/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>" +
 			" /Contents 4 0 R >>",
 		4: fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content), content),
 	}
@@ -126,7 +126,7 @@ func TestSignExistingNestedPageTree(t *testing.T) {
 	objs := thirdPartyObjs()
 	objs[2] = "<< /Type /Pages /Kids [5 0 R] /Count 2 >>"
 	objs[3] = "<< /Type /Page /Parent 5 0 R /MediaBox [0 0 595 842] /Contents 4 0 R " +
-		"/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >> >>"
+		"/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>"
 	objs[5] = "<< /Type /Pages /Parent 2 0 R /Kids [3 0 R 6 0 R] /Count 2 >>"
 	objs[6] = "<< /Type /Page /Parent 5 0 R /MediaBox [0 0 595 842] >>"
 	data := buildClassicPDF(objs, 1, "", "\n")

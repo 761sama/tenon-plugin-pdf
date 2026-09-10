@@ -2,9 +2,11 @@ package sign_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -139,9 +141,14 @@ m = re.search(rb'/ByteRange \[(\d+) (\d+) (\d+) (\d+)\]', d)
 a, b, c, l = int(m[1]), int(m[2]), int(m[3]), int(m[4])
 open(sys.argv[2], 'wb').write(d[a:a+b] + d[c:c+l])
 m2 = re.search(rb'/Contents <([0-9A-Fa-f]+)>', d[m.end():])
-sig = m2[1].rstrip(b'0')
-if len(sig) % 2: sig += b'0'
-open(sys.argv[3], 'wb').write(bytes.fromhex(sig.decode()))
+raw = bytes.fromhex(m2[1].decode())
+# 按 DER 首 TLV 长度截取（尾部是占位符补零，不能 rstrip '0'）
+i, ln = 2, raw[1]
+if ln & 0x80:
+    n = ln & 0x7f
+    ln = int.from_bytes(raw[2:2+n], 'big')
+    i = 2 + n
+open(sys.argv[3], 'wb').write(raw[:i+ln])
 `
 	sigDer := filepath.Join(dir, "sig.der")
 	content := filepath.Join(dir, "content.bin")
@@ -152,6 +159,54 @@ open(sys.argv[3], 'wb').write(bytes.fromhex(sig.decode()))
 		"-in", sigDer, "-content", content, "-noverify", "-binary", "-out", os.DevNull).CombinedOutput()
 	if err != nil {
 		t.Fatalf("openssl 验签失败: %v\n%s", err, out)
+	}
+}
+
+// TestVerifyTrailingZeroCMS 回归：/Contents 尾部以 '0' 填充占位，
+// 验签不得 TrimRight '0'——CMS 真实尾部为 0x00 字节时（约 1/256 概率）
+// 会被误删导致 "DER 内容越界" 误报。应完整解码后按首 TLV 长度截取。
+func TestVerifyTrailingZeroCMS(t *testing.T) {
+	key, _ := sign.GenerateRSAKey()
+	cert, _ := sign.GenerateSelfSigned("Trailing Zero", key)
+	// 反复签署直至样本 CMS 末字节恰为 0x00（/M 时间戳逐次变化 → 签名值变化）
+	found := false
+	for i := 0; i < 2000 && !found; i++ {
+		signed, err := sign.Sign(buildSignableDoc(t), sign.Options{Signer: key, Certificate: cert})
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := regexp.MustCompile(`/Contents <([0-9A-Fa-f]+)>`).FindSubmatch(signed)
+		if m == nil {
+			t.Fatal("未找到 /Contents")
+		}
+		raw, err := hex.DecodeString(string(m[1]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// 首 TLV 长度定位有效 CMS
+		hdr, ln := 2, int(raw[1])
+		if ln&0x80 != 0 {
+			n := ln & 0x7f
+			ln = 0
+			for k := 0; k < n; k++ {
+				ln = ln<<8 | int(raw[2+k])
+			}
+			hdr += n
+		}
+		if raw[hdr+ln-1] != 0x00 {
+			continue // 不是目标样本
+		}
+		found = true
+		res, err := sign.Verify(signed)
+		if err != nil {
+			t.Fatalf("CMS 尾字节为 0x00 的签名验签误报: %v", err)
+		}
+		if !res.Valid {
+			t.Fatalf("CMS 尾字节为 0x00 的签名应有效: %s", res.Message)
+		}
+	}
+	if !found {
+		t.Skip("2000 轮未命中尾字节 0x00 样本（概率应极低）")
 	}
 }
 

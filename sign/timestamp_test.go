@@ -199,14 +199,21 @@ func TestTimestamp(t *testing.T) {
 		if m == nil {
 			t.Fatal("未找到 /Contents")
 		}
-		hexStr := strings.TrimRight(string(m[1]), "0")
-		if len(hexStr)%2 != 0 {
-			hexStr += "0"
-		}
-		cmsDER, err := hex.DecodeString(hexStr)
+		// 按 DER 首 TLV 长度截取（尾部是占位符补零，不能 TrimRight '0'）
+		raw, err := hex.DecodeString(string(m[1]))
 		if err != nil {
 			t.Fatal(err)
 		}
+		hdr, ln := 2, int(raw[1])
+		if ln&0x80 != 0 {
+			n := ln & 0x7f
+			ln = 0
+			for i := 0; i < n; i++ {
+				ln = ln<<8 | int(raw[2+i])
+			}
+			hdr += n
+		}
+		cmsDER := raw[:hdr+ln]
 		token := extractTSToken(t, cmsDER)
 		imprint := extractTSTImprint(t, token)
 		tokenPath := filepath.Join(dir, "token.der")

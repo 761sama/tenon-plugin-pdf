@@ -228,14 +228,21 @@ func verifyCore(doc []byte, from int) (*VerifyResult, *parsedCMS, int, error) {
 	if hexStart < 0 || hexEnd < 0 {
 		return fail("sign: /Contents 格式错误")
 	}
-	hexStr := strings.TrimRight(string(doc[bi+ck+hexStart+1:bi+ck+hexEnd]), "0")
+	// /Contents 以 '0' 填充至定宽占位符：不可按尾部 '0' 反推长度
+	//（会误删 CMS 真实尾部的 0x00 字节），应完整解码后按首 TLV 长度截取。
+	hexStr := string(doc[bi+ck+hexStart+1 : bi+ck+hexEnd])
 	if len(hexStr)%2 != 0 {
-		hexStr += "0"
+		hexStr += "0" // 奇数半字节按规范补 0
 	}
-	cms, err := hex.DecodeString(hexStr)
+	raw, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return fail("sign: /Contents 十六进制解码失败: %v", err)
 	}
+	top, _, err := readTLV(raw)
+	if err != nil {
+		return fail("sign: /Contents CMS 结构解析失败: %v", err)
+	}
+	cms := top.raw
 
 	// 3. ByteRange 内容摘要
 	h := sha256.New()
