@@ -237,12 +237,21 @@ trailer /Prev），既有字节一概不动，前序签名保持有效。为此�
 逐个校验，非末位签名只覆盖到其修订末尾属正常。
 
 **第三方既有 PDF 签署**：增量修订机制与文档来源无关——`AppendSignatureField`
-已泛化为支持任意经典 xref 表布局的 PDF：Catalog 无 AcroForm 时新建
+已泛化为支持任意未加密 PDF：Catalog 无 AcroForm 时新建
 `/AcroForm << /Fields [..] /SigFlags 3 >>` 并重定义 Catalog（AcroForm 为内联
 字典时原地插入字段引用）；页树支持嵌套 Pages 节点遍历定位目标页
 （`findPage` DFS）。`sign.SignExisting` = AppendSignatureField + Sign 一步完成。
 签名值字典 /V 一律写为**间接对象**（本库生成路径同样如此）——部分验证器
 （如 pyhanko）不接受内联 /V。
+
+**布局无关的读取侧（sign/xrefstream.go）**：解析入口从最后一个 startxref
+出发沿 /Prev 链逐段建立对象索引（`buildIndex`），经典 xref 表与 xref 流
+（§7.5.8）可任意混排，含 /XRefStm 混合引用段（表条目优先于流条目）；
+对象按索引定位：普通间接对象按偏移取本体（按 /Length 跳过流区再找
+endobj），压缩对象从 ObjStm 解压寻址（FlateDecode + PNG/TIFF predictor）。
+**追加侧不引入新格式**：无论输入布局如何，修订段一律写经典 xref 表 +
+trailer——规范允许两种 xref 形态在修订链中混排，poppler/qpdf/pyhanko
+均接受，从而把 xref 流编码复杂度完全隔离在读取侧。
 
 **时间戳（RFC 3161）**：`Options.TSA` 配置后，Sign 对签名值取 SHA-256 作为
 messageImprint 向 TSA 请求令牌，作为 signature-time-stamp 未认证属性
@@ -268,9 +277,11 @@ signingCertificateV2 属性——openssl ts -verify 强制要求。未认证属�
 CRL/OCSP 的获取（CA 应答）与签署后增量追加留给调用方。
 
 **取舍**：
-- 增量解析器为最小字节级实现：仅支持经典交叉引用表布局（trailer 字典），
-  纯 xref 流 / 对象流（ObjStm）布局的第三方文档报明确错误，不做通用解析器。
-- 加密文档不支持增量追加签名字段（追加对象需持文件密钥加密）。
+- 增量解析器为最小字节级实现：只读取增量签名所需的对象（Catalog/AcroForm/
+  页树），不做通用解析器；流过滤器仅支持 FlateDecode（xref 流与 ObjStm 的
+  事实标准），其他过滤器（如 LZW）报明确错误。
+- 加密文档不支持增量追加签名字段（追加对象需持文件密钥加密），
+  加密输入给出明确中文错误，不产出半成品文件。
 - 占位空间固定 16KB，超大证书链需调库常量。
 
 ### 3.5 加密（security/）

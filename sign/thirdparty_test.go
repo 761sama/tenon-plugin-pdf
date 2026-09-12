@@ -230,13 +230,14 @@ func TestSignExistingErrors(t *testing.T) {
 	cert, _ := sign.GenerateSelfSigned("X", key)
 	opts := sign.Options{Signer: key, Certificate: cert}
 
-	// 纯 xref 流（无 trailer 字典）
+	// 损坏的 xref 流（/W 与数据长度不匹配）：xref 流布局已支持，
+	// 此处校验损坏输入报明确错误而非 panic
 	xrefStream := []byte("%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
 		"3 0 obj\n<< /Type /XRef /Size 4 /Root 1 0 R /W [1 2 1] /Length 10 >>\nstream\n0123456789\nendstream\nendobj\n" +
 		"startxref\n60\n%%EOF\n")
 	if _, err := sign.SignExisting(xrefStream, nil, opts); err == nil ||
-		!strings.Contains(err.Error(), "trailer") {
-		t.Errorf("xref 流文档应报 trailer 相关错误, got %v", err)
+		!strings.Contains(err.Error(), "xref") {
+		t.Errorf("损坏的 xref 流文档应报明确错误, got %v", err)
 	}
 
 	// 加密文档

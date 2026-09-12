@@ -17,9 +17,11 @@ import (
 // 再用 Sign 回填。每个签名的 ByteRange 覆盖其签署时刻的文件内容，
 // 前序签名因此不被后序签名破坏——这是 Acrobat 会签的标准机制。
 //
-// 输入限制（最小字节级解析的边界，诚实声明）：
-//   - 经典交叉引用表布局（trailer 字典）；纯 xref 流（PDF 1.5+，无 trailer）不支持；
-//   - 对象须在顶层间接对象中（对象流 ObjStm 内压缩对象不可寻址）；
+// 输入布局支持（最小字节级解析的边界，诚实声明）：
+//   - 经典交叉引用表与 xref 流（PDF 1.5+）布局均可，两者可在修订链中混排
+//     （含 /XRefStm 混合段、多段 /Prev 链）；
+//   - 压缩在对象流（ObjStm）中的对象可寻址读取（FlateDecode 解码）；
+//   - 追加的修订段一律写经典 xref 表 + trailer（规范允许混排）；
 //   - 未加密文档（追加对象无法持文件密钥加密）。
 
 // AppendSignatureField 在 doc 末尾追加一个增量修订段，内含新的签名字段
@@ -30,15 +32,12 @@ func AppendSignatureField(doc []byte, f *Field) ([]byte, error) {
 	if f == nil {
 		f = &Field{}
 	}
-	// 1. 上一个 xref 位置与 trailer
-	prevXref, err := lastStartxref(doc)
+	// 1. 沿 xref 链建立对象索引（经典表 / xref 流 / 混合段均可）
+	idx, prevXref, err := buildIndex(doc)
 	if err != nil {
 		return nil, err
 	}
-	trailer, err := lastTrailer(doc, prevXref)
-	if err != nil {
-		return nil, err
-	}
+	trailer := idx.trailer
 	if trailer.encrypt > 0 {
 		return nil, fmt.Errorf("sign: 加密文档不支持追加签名字段（增量修订无法加密新对象）")
 	}
@@ -48,7 +47,7 @@ func AppendSignatureField(doc []byte, f *Field) ([]byte, error) {
 	}
 
 	// 2. Catalog → AcroForm（引用 / 内联字典 / 缺失三种形态）
-	catalog, err := objectBody(doc, rootNum)
+	catalog, err := idx.body(doc, rootNum)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func AppendSignatureField(doc []byte, f *Field) ([]byte, error) {
 	acro := ""
 	existFields := ""
 	if acroNum != 0 {
-		if acro, err = objectBody(doc, acroNum); err != nil {
+		if acro, err = idx.body(doc, acroNum); err != nil {
 			return nil, err
 		}
 		existFields = arrayBody(acro, "Fields")
@@ -73,11 +72,11 @@ func AppendSignatureField(doc []byte, f *Field) ([]byte, error) {
 	if pageIdx < 0 {
 		pageIdx = 0
 	}
-	pageNum, err := findPage(doc, pagesNum, pageIdx)
+	pageNum, err := idx.findPage(doc, pagesNum, pageIdx)
 	if err != nil {
 		return nil, err
 	}
-	pageBody, err := objectBody(doc, pageNum)
+	pageBody, err := idx.body(doc, pageNum)
 	if err != nil {
 		return nil, err
 	}
@@ -256,8 +255,8 @@ func SignExisting(doc []byte, field *Field, opts Options) ([]byte, error) {
 	return Sign(withField, opts)
 }
 
-// findPage 沿页树（支持嵌套 Pages 节点）找到第 idx 个叶子页面对象号。
-func findPage(doc []byte, root, idx int) (int, error) {
+// findPage 沿页树（支持嵌套 Pages 节点）找到第 pageIdx 个叶子页面对象号。
+func (d *docIndex) findPage(doc []byte, root, pageIdx int) (int, error) {
 	found := 0
 	pageNum := 0
 	var visit func(num, depth int) error
@@ -268,13 +267,13 @@ func findPage(doc []byte, root, idx int) (int, error) {
 		if depth > 32 {
 			return fmt.Errorf("sign: 页树嵌套过深")
 		}
-		body, err := objectBody(doc, num)
+		body, err := d.body(doc, num)
 		if err != nil {
 			return err
 		}
 		kids := arrayRefs(arrayBody(body, "Kids"))
 		if len(kids) == 0 {
-			if found == idx {
+			if found == pageIdx {
 				pageNum = num
 			}
 			found++
@@ -295,7 +294,7 @@ func findPage(doc []byte, root, idx int) (int, error) {
 			return 0, fmt.Errorf("sign: 页树为空")
 		}
 		// idx 越界回退第 0 页
-		return findPage(doc, root, 0)
+		return d.findPage(doc, root, 0)
 	}
 	return pageNum, nil
 }
@@ -380,42 +379,6 @@ func lastStartxref(doc []byte) (int, error) {
 		return 0, fmt.Errorf("sign: startxref 解析失败")
 	}
 	return strconv.Atoi(string(m[1]))
-}
-
-// lastTrailer 解析 prevXref 之后的 trailer 字典（仅提取增量更新所需键）。
-func lastTrailer(doc []byte, prevXref int) (*trailerInfo, error) {
-	ti := bytes.Index(doc[prevXref:], []byte("trailer"))
-	if ti < 0 {
-		return nil, fmt.Errorf("sign: 找不到 trailer（纯 xref 流布局的文档暂不支持）")
-	}
-	td := doc[prevXref+ti:]
-	end := bytes.Index(td, []byte(">>"))
-	if end < 0 {
-		return nil, fmt.Errorf("sign: trailer 字典不完整")
-	}
-	body := string(td[:end+2])
-	t := &trailerInfo{id: arrayText(body, "ID")}
-	t.size = intValue(body, "Size")
-	t.root = refValueStr(body, "Root")
-	t.info = refValueStr(body, "Info")
-	t.encrypt = refValueStr(body, "Encrypt")
-	if t.size == 0 {
-		return nil, fmt.Errorf("sign: trailer 缺少 /Size")
-	}
-	return t, nil
-}
-
-var objRe = func(num int) *regexp.Regexp {
-	return regexp.MustCompile(`(?s)(?:^|\n)` + strconv.Itoa(num) + ` 0 obj\s*\n(.*?)\nendobj`)
-}
-
-// objectBody 提取对象 N 的本体字节（多个修订段重定义时取最后一个）。
-func objectBody(doc []byte, num int) (string, error) {
-	matches := objRe(num).FindAllSubmatch(doc, -1)
-	if len(matches) == 0 {
-		return "", fmt.Errorf("sign: 对象 %d 不存在（或位于对象流/xref 流布局，暂不支持）", num)
-	}
-	return string(matches[len(matches)-1][1]), nil
 }
 
 // refValue 从对象本体提取 /Key N 0 R 的对象号。

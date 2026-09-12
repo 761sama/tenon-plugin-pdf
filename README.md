@@ -231,7 +231,7 @@ doc.SetSignature(&sign.Field{
 doc.SetDSS(pdf.DSSData{Certs: chain, CRLs: crlDERs, OCSPs: ocspDERs})
 
 // 签署第三方既有 PDF（任意来源、无占位符）：增量修订追加签名字段后签署，
-// 既有字节不动；限经典 xref 表布局、未加密文档
+// 既有字节不动；支持经典 xref 表与 xref 流/对象流布局，限未加密文档
 data, _ := os.ReadFile("third-party.pdf")
 signed, _ = sign.SignExisting(data, &sign.Field{Reason: "合同审批"},
     sign.Options{Signer: key, Certificate: cert})
@@ -297,9 +297,10 @@ pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
   超出范围
 - **加密**：不支持 RC4 内容加密（V1–V3，纯遗留）；PubSec 仅支持 RSA 收件人证书；
   加密文档不支持增量多重签名（追加修订段需持文件密钥加密）
-- **签名**：第三方既有 PDF 签署限经典交叉引用表布局（纯 xref 流/对象流不支持）、
-  未加密文档；LTV 中 CRL/OCSP 的在线获取与签署后增量追加由调用方负责；
-  可见签名外观文本限 WinAnsi 字符（非 ASCII 显示为 '?'）；
+- **签名**：第三方既有 PDF 签署支持经典交叉引用表与 xref 流/对象流（ObjStm）布局
+  （含两者混排的多段修订链、/XRefStm 混合引用段），限未加密文档
+  （加密文档追加签名字段会给出明确错误）；LTV 中 CRL/OCSP 的在线获取与签署后
+  增量追加由调用方负责；可见签名外观文本限 WinAnsi 字符（非 ASCII 显示为 '?'）；
   签名占位空间固定 16KB（超大证书链需调库常量）
 - **PDF/A、PDF/X、PDF/UA** 合规性与标记 PDF（Tagged PDF）
 - **高级着色**：函数类型 0/3/4（采样/拼接/PostScript）、网格渐变（Type 4–7）、
@@ -307,7 +308,9 @@ pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
 - **可选内容组**（图层 OCG）、透明度组 XObject
 - **表单**：单选按钮、下拉/列表框、JavaScript 动作（签名字段已支持）
 - **其他批注**：FreeText、Stamp、Ink、FileAttachment、3D/多媒体
-- **文件结构**：对象流（xref stream）、增量更新、线性化（web 优化）
+- **文件结构**：生成端只写经典 xref 表（对象流/xref 流输出未实现）；
+  增量更新仅用于追加签名字段修订段（读取侧支持经典表与 xref 流/对象流混排输入）；
+  线性化（web 优化）未实现
 - **图像**：JBIG2/JPX（JPEG2000）解码、16 位通道、ICC 色彩配置
 - **Symbol/ZapfDingbats** 未内置宽度表，本地排版时按 600/1000 估算
   （查看器使用内置度量，渲染不受影响）

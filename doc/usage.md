@@ -193,7 +193,8 @@ signed, _ := sign.SignExisting(data,               // 增量追加签名字段�
     &sign.Field{Reason: "合同审批"},               // field 传 nil 亦可
     sign.Options{Signer: key, Certificate: cert})
 // 既有字节一概不动（标准增量修订）；可见签名用 Field.Rect 指定
-// 限制：经典交叉引用表布局（非纯 xref 流/对象流）、未加密
+// 布局：经典 xref 表与 xref 流/对象流（ObjStm）均可（含混排多段修订链）；
+// 限制：未加密文档（加密输入报明确错误）
 ```
 
 证书链、时间戳、多重签名、可见签名与 LTV：
@@ -241,8 +242,9 @@ doc.SetDSS(pdf.DSSData{
 ```
 
 > 边界：可见签名外观文本限 WinAnsi 字符（中文等显示为 '?'）；
-> 第三方 PDF 签署不支持纯 xref 流/对象流布局与加密文档（增量解析器为最小字节级实现）；
-> 加密文档不支持增量多重签名（追加修订段需持文件密钥加密）；
+> 第三方 PDF 签署支持经典 xref 表与 xref 流/对象流布局（增量解析器为最小字节级实现，
+> 流过滤器仅 FlateDecode）；不支持加密文档（追加修订段需持文件密钥加密，遇加密输入
+> 报明确中文错误）；
 > LTV 中 CRL/OCSP 的在线获取由调用方负责。
 
 签名选项（`sign.Options`）：
