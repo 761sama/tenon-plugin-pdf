@@ -18,7 +18,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// buildPubKeyDoc 生成公钥证书加密文档（两个收件人，各持不同权限）。
+// 生成公钥证书加密文档（两个收件人，各持不同权限）。
 func buildPubKeyDoc(t *testing.T, level security.Level) (data, cert1PEM, key1PEM []byte) {
 	t.Helper()
 	key1, err := sign.GenerateRSAKey()
@@ -60,6 +60,7 @@ func buildPubKeyDoc(t *testing.T, level security.Level) (data, cert1PEM, key1PEM
 	return data, sign.MarshalCertPEM(cert1), kb
 }
 
+// 测试公钥加密文档结构：PubSec 标记齐全、内容流已加密，且与标准密码加密互斥、空收件人报错。
 func TestPubKeyEncryptStructure(t *testing.T) {
 	for _, level := range []security.Level{security.AES128, security.AES256} {
 		data, _, _ := buildPubKeyDoc(t, level)
@@ -110,7 +111,7 @@ func TestPubKeyEncryptStructure(t *testing.T) {
 	}
 }
 
-// extractEnvelopes 从加密字典提取各收件人信封 DER。
+// 从加密字典提取各收件人信封 DER。
 func extractEnvelopes(t *testing.T, data []byte) [][]byte {
 	t.Helper()
 	m := regexp.MustCompile(`(?s)/Recipients \[([^\]]+)\]`).FindSubmatch(data)
@@ -129,6 +130,7 @@ func extractEnvelopes(t *testing.T, data []byte) [][]byte {
 	return out
 }
 
+// 测试 AES256 级别的单收件人公钥加密：V5/AESV3 结构存在且内容已加密。
 func TestPubKeyAES256(t *testing.T) {
 	key, err := sign.GenerateRSAKey()
 	if err != nil {
@@ -250,7 +252,7 @@ print('OK: 外部工具完整解密内容流:', plain[:60].replace('\n', ' '))
 	}
 }
 
-// TestPubKeyPermsInEnvelope 校验每收件人权限字节（收件人二禁止复制）。
+// 校验每收件人权限字节（收件人二禁止复制）。
 func TestPubKeyPermsInEnvelope(t *testing.T) {
 	if _, err := exec.LookPath("openssl"); err != nil {
 		t.Skip("openssl 不可用")

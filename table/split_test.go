@@ -12,6 +12,7 @@ import (
 
 // --- 表头行合并 ---
 
+// 测试多行表头的跨列/跨行合并：网格展开正确、渲染文本齐全、跨列表头边框宽度为列宽之和。
 func TestHeaderRowMergeGrid(t *testing.T) {
 	tb := New(Column{Width: 60}, Column{Width: 60}, Column{Width: 60})
 	tb.HeaderRows = 2
@@ -42,6 +43,7 @@ func TestHeaderRowMergeGrid(t *testing.T) {
 	}
 }
 
+// 测试表头行跨行越过表头区时被截断到 HeaderRows 边界，且表头/数据边界允许分页。
 func TestHeaderRowSpanClamp(t *testing.T) {
 	tb := New(Column{Width: 60}, Column{Width: 60})
 	tb.HeaderRows = 2
@@ -60,6 +62,7 @@ func TestHeaderRowSpanClamp(t *testing.T) {
 	}
 }
 
+// 测试合并表头在跨页时每页重复绘制，且全部数据行不重复不丢失。
 func TestHeaderMergePaginationRepeat(t *testing.T) {
 	tb := New(Column{Width: 80}, Column{Width: 80})
 	tb.HeaderRows = 1
@@ -97,7 +100,7 @@ func TestHeaderMergePaginationRepeat(t *testing.T) {
 
 var tjRe = regexp.MustCompile(`\(([^()]*)\) Tj`)
 
-// extractLines 按绘制顺序提取页面内容流中的文本行。
+// 按绘制顺序提取页面内容流中的文本行。
 func extractLines(pg *page.Page) []string {
 	var out []string
 	for _, m := range tjRe.FindAllStringSubmatch(string(pg.Content.Bytes()), -1) {
@@ -106,7 +109,7 @@ func extractLines(pg *page.Page) []string {
 	return out
 }
 
-// splitPages 用固定页面几何绘制表格，返回全部页面。
+// 用固定页面几何绘制表格，返回全部页面。
 func splitPages(tb *Table, bottomY float64) []*page.Page {
 	pages := []*page.Page{page.New(page.A4)}
 	newPage := func() (*page.Page, float64) {
@@ -118,6 +121,7 @@ func splitPages(tb *Table, bottomY float64) []*page.Page {
 	return pages
 }
 
+// 测试超高行按文本行跨页拆分：内容顺序一致、无重复、无丢失，首尾内容分别在首页和末页。
 func TestTallRowSplitAcrossPages(t *testing.T) {
 	// 单行文本远超整页可用高度 → 按文本行拆分
 	var words []string
@@ -163,6 +167,7 @@ func TestTallRowSplitAcrossPages(t *testing.T) {
 	}
 }
 
+// 测试超过整页的跨行合并块按行边界拆分：块内短行标签不丢不重，合并长文本连续完整，块前/块内/块后顺序正确。
 func TestOversizedRowspanBlockSplit(t *testing.T) {
 	// 跨 40 行的合并块超过整页 → 按行边界拆分
 	tb := New(Column{Width: 100}, Column{Width: 100})
@@ -223,6 +228,7 @@ func TestOversizedRowspanBlockSplit(t *testing.T) {
 	}
 }
 
+// 测试超高行拆分后，各页所有矩形边框下边缘不越过 bottomY。
 func TestSplitBordersWithinPage(t *testing.T) {
 	// 拆分页上所有矩形边框不得越过 bottomY
 	var words []string

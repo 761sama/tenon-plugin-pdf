@@ -11,7 +11,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// buildChain 构造 根CA → 中间CA → 签名者 三级链。
+// 构造 根CA → 中间CA → 签名者 三级链。
 func buildChain(t *testing.T) (signerKey crypto.Signer,
 	root, inter, signer *x509.Certificate) {
 	t.Helper()
@@ -42,7 +42,7 @@ func buildChain(t *testing.T) (signerKey crypto.Signer,
 	return sk, root, inter, signer
 }
 
-// TestChainVerify 证书信任链验证：完整链 → 通过；根不受信 → 失败；链断裂 → 失败。
+// 证书信任链验证：完整链 → 通过；根不受信 → 失败；链断裂 → 失败。
 func TestChainVerify(t *testing.T) {
 	signerKey, root, inter, signer := buildChain(t)
 

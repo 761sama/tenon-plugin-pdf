@@ -76,7 +76,7 @@ func TestEncryptedAndSigned(t *testing.T) {
 	}
 }
 
-// TestEncryptedAndSignedTamper 篡改加密+签名文档后验签必须失败。
+// 篡改加密+签名文档后验签必须失败。
 func TestEncryptedAndSignedTamper(t *testing.T) {
 	doc := pdf.New()
 	doc.SetEncryption(security.Options{OwnerPassword: "o", Level: security.AES256})

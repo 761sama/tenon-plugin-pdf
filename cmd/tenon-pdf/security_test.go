@@ -10,7 +10,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// TestEncryptCmd 加密子命令：生成 → pdfinfo 识别 → 密码提取文本。
+// 加密子命令：生成 → pdfinfo 识别 → 密码提取文本。
 func TestEncryptCmd(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "enc.pdf")
 	if err := cmdEncrypt([]string{"-o", out, "-user", "u123", "-owner", "o456", "-aes256", "-no-copy"}); err != nil {
@@ -28,7 +28,7 @@ func TestEncryptCmd(t *testing.T) {
 	}
 }
 
-// TestSignExistingCmd 签署既有 PDF（-in）：无签名占位符的文档增量追加签署。
+// 签署既有 PDF（-in）：无签名占位符的文档增量追加签署。
 func TestSignExistingCmd(t *testing.T) {
 	dir := t.TempDir()
 	// 先造一份无签名字段的既有 PDF（本库生成；第三方产物由 sign 包单测覆盖）
@@ -59,7 +59,7 @@ func TestSignExistingCmd(t *testing.T) {
 	}
 }
 
-// TestMultiSignCmd 多重签名 CLI：-multi 3 依次会签 → verify 逐个校验通过。
+// 多重签名 CLI：-multi 3 依次会签 → verify 逐个校验通过。
 func TestMultiSignCmd(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "multi.pdf")
@@ -106,6 +106,7 @@ func TestChainVerifyCmd(t *testing.T) {
 	}
 }
 
+// 公钥加密 CLI：-recip 证书加密，输出含 PubSec 结构且明文不可提取。
 func TestEncryptPubKeyCmd(t *testing.T) {
 	dir := t.TempDir()
 	key, err := sign.GenerateRSAKey()
@@ -135,6 +136,8 @@ func TestEncryptPubKeyCmd(t *testing.T) {
 		t.Error("内容未加密")
 	}
 }
+
+// 签名 CLI 闭环：自签 → 校验通过；篡改后必须无效；ECDSA 路径同样有效。
 func TestSignVerifyCmd(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "signed.pdf")

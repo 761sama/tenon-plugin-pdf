@@ -12,6 +12,7 @@ import (
 // subsetFontPath 随仓库提交的思源黑体演示子集字体。
 const subsetFontPath = "../cmd/tenon-pdf/assets/NotoSansSC-Subset.ttf"
 
+// 加载随仓库提交的子集字体并命名为 NotoSansSC；资源不可用时跳过测试
 func loadSubset(t *testing.T) *CJKFont {
 	t.Helper()
 	f, err := LoadCJKFile(subsetFontPath)
@@ -22,6 +23,7 @@ func loadSubset(t *testing.T) *CJKFont {
 	return f
 }
 
+// 测试 CJK 编码：CID 从 1 连续分配、重复编码复用 CID、缺字形字符映射为 CID 0
 func TestCJKEncode(t *testing.T) {
 	f := loadSubset(t)
 	enc := f.Encode("中文AB")
@@ -43,6 +45,7 @@ func TestCJKEncode(t *testing.T) {
 	}
 }
 
+// 测试 CJK 字宽与度量：中文全宽、TextWidth 缩放、Ascent/Descent/LineHeight 合理
 func TestCJKWidth(t *testing.T) {
 	f := loadSubset(t)
 	// 中文字形通常全宽（1000/1000 em）
@@ -57,6 +60,7 @@ func TestCJKWidth(t *testing.T) {
 	}
 }
 
+// 测试 CJK Type0 字体字典与序列化：子集前缀、CIDFontType2、FontFile2、ToUnicode 及缓存
 func TestCJKBuildDict(t *testing.T) {
 	f := loadSubset(t)
 	f.Encode("采购订单 test 0123")
@@ -100,6 +104,7 @@ func TestCJKBuildDict(t *testing.T) {
 	}
 }
 
+// 测试 Resource 接口断言：CJKFont 与标准字体均实现 Resource 且接口分发正常
 func TestCJKResourceInterface(t *testing.T) {
 	// 编译期与运行期接口断言
 	var _ Resource = (*CJKFont)(nil)

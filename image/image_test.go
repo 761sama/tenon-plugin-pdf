@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+// 构造 4x3 PNG 字节流；withAlpha 为 true 时首列像素半透明（用于触发 SMask）
 func makePNG(t *testing.T, withAlpha bool) []byte {
 	t.Helper()
 	img := image.NewNRGBA(image.Rect(0, 0, 4, 3))
@@ -29,6 +30,7 @@ func makePNG(t *testing.T, withAlpha bool) []byte {
 	return buf.Bytes()
 }
 
+// 测试不透明 PNG 解码：尺寸、FlateDecode/DeviceRGB，且无 SMask
 func TestDecodePNG(t *testing.T) {
 	im, err := Decode(bytes.NewReader(makePNG(t, false)))
 	if err != nil {
@@ -45,6 +47,7 @@ func TestDecodePNG(t *testing.T) {
 	}
 }
 
+// 测试带透明通道的 PNG 解码时生成 DeviceGray 的 SMask
 func TestDecodePNGWithAlpha(t *testing.T) {
 	im, err := Decode(bytes.NewReader(makePNG(t, true)))
 	if err != nil {
@@ -58,6 +61,7 @@ func TestDecodePNGWithAlpha(t *testing.T) {
 	}
 }
 
+// 测试灰度 PNG 解码后颜色空间为 DeviceGray
 func TestDecodeGrayPNG(t *testing.T) {
 	img := image.NewGray(image.Rect(0, 0, 2, 2))
 	var buf bytes.Buffer
@@ -73,6 +77,7 @@ func TestDecodeGrayPNG(t *testing.T) {
 	}
 }
 
+// 测试 JPEG 解码：DCTDecode/DeviceRGB，且原始数据原样保留
 func TestDecodeJPEG(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 16, 8))
 	var buf bytes.Buffer
@@ -96,6 +101,7 @@ func TestDecodeJPEG(t *testing.T) {
 	}
 }
 
+// 测试图片 XObject 流字典包含 Type/尺寸/颜色空间/SMask 等键
 func TestStreamDict(t *testing.T) {
 	im, err := Decode(bytes.NewReader(makePNG(t, true)))
 	if err != nil {
@@ -115,8 +121,10 @@ func TestStreamDict(t *testing.T) {
 
 type testRef struct{}
 
+// 返回固定的间接引用 "9 0 R"，作为测试中 SMask 引用的占位实现
 func (testRef) Encode(dst []byte) []byte { return append(dst, "9 0 R"...) }
 
+// 测试无法识别的数据解码时返回错误
 func TestDecodeUnknown(t *testing.T) {
 	if _, err := Decode(strings.NewReader("not an image at all")); err == nil {
 		t.Error("expected error for unknown format")

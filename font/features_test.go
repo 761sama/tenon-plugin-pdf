@@ -10,6 +10,7 @@ import (
 // dejaVuPath 系统 DejaVu Sans（glyf + kern 表 + GSUB liga），用于连字/字距测试。
 const dejaVuPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
+// 加载系统 DejaVu Sans 字体；缺文件或缺 liga/kern 特性时跳过测试，返回 *CJKFont
 func loadDejaVu(t *testing.T) *CJKFont {
 	t.Helper()
 	f, err := LoadCJKFile(dejaVuPath)
@@ -22,6 +23,7 @@ func loadDejaVu(t *testing.T) *CJKFont {
 	return f
 }
 
+// 测试连字编码：fi/ffi 合并为单 CID、禁用后逐字符编码、最长匹配优先
 func TestCJKLigatureEncode(t *testing.T) {
 	f := loadDejaVu(t)
 	// 默认启用连字："fi" 合并为单个字形 → 单 CID
@@ -41,6 +43,7 @@ func TestCJKLigatureEncode(t *testing.T) {
 	}
 }
 
+// 测试连字 CID 的 ToUnicode CMap 映射回多个 Unicode 码点（fi）
 func TestCJKLigatureToUnicode(t *testing.T) {
 	f := loadDejaVu(t)
 	f.Encode("fi")
@@ -53,6 +56,7 @@ func TestCJKLigatureToUnicode(t *testing.T) {
 	}
 }
 
+// 测试字距处理：EncodeKerned 生成 TJ 调整段、宽度计入字距、禁用后无调整
 func TestCJKKerning(t *testing.T) {
 	f := loadDejaVu(t)
 	// EncodeKerned：AV 有字距 → TJ 段；HH 无字距 → nil
@@ -94,6 +98,7 @@ func TestCJKKerning(t *testing.T) {
 	}
 }
 
+// 测试 Kerned 接口断言：CJKFont 实现 Kerned，标准 14 字体不实现
 func TestCJKEncodeKernedInterface(t *testing.T) {
 	var _ Kerned = (*CJKFont)(nil) // 编译期断言
 	// 标准 14 字体不实现 Kerned（不嵌入、无 kern 数据）
@@ -102,6 +107,7 @@ func TestCJKEncodeKernedInterface(t *testing.T) {
 	}
 }
 
+// 测试 CapHeight 按字号缩放读取 OS/2 sCapHeight 值
 func TestCJKCapHeight(t *testing.T) {
 	f := loadSubset(t)
 	// 子集字体 OS/2 v4：sCapHeight=733，UnitsPerEm=1000
@@ -110,6 +116,7 @@ func TestCJKCapHeight(t *testing.T) {
 	}
 }
 
+// 测试 TTC 集合字体加载：索引加载、LoadCJKFile 喂 TTC 报引导性错误、越界索引报错
 func TestLoadCJKCollection(t *testing.T) {
 	// 单字体文件：index 0 兼容路径
 	f, err := LoadCJKCollectionFile(subsetFontPath, 0)

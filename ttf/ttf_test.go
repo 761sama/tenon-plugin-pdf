@@ -8,6 +8,7 @@ import (
 // 测试字体路径（完整版思源黑体/Noto Sans SC 变量字体，未提交到仓库）。
 const fullFontPath = "/tmp/opencode/NotoSansSC-Regular.ttf"
 
+// 加载完整版测试字体（入参 t 用于失败/跳过处理，返回解析后的字体；字体缺失时跳过测试）。
 func loadFull(t *testing.T) *Font {
 	t.Helper()
 	data, err := os.ReadFile(fullFontPath)
@@ -21,6 +22,7 @@ func loadFull(t *testing.T) *Font {
 	return f
 }
 
+// 测试解析完整字体的基本指标（UnitsPerEm、字形数、Ascent/Descent、PSName）。
 func TestParse(t *testing.T) {
 	f := loadFull(t)
 	if f.UnitsPerEm != 1000 {
@@ -38,6 +40,7 @@ func TestParse(t *testing.T) {
 	t.Logf("PSName=%s glyphs=%d", f.PSName(), f.NumGlyphs)
 }
 
+// 测试字符到字形索引的映射：中英文与数字应有字形，超出范围的码点应返回 0。
 func TestGlyphIndex(t *testing.T) {
 	f := loadFull(t)
 	for _, r := range "中文ABCabc012" {
@@ -50,6 +53,7 @@ func TestGlyphIndex(t *testing.T) {
 	}
 }
 
+// 测试字体子集化：子集体积足够小、可再解析、cmap 重映射正确、步进宽度与原字体一致。
 func TestSubset(t *testing.T) {
 	f := loadFull(t)
 	text := "中文采购订单 0123 ABCabc"
@@ -100,6 +104,7 @@ func TestSubset(t *testing.T) {
 	}
 }
 
+// 测试子集化时复合字形的组件闭包：复合字形的组件应一并纳入子集。
 func TestSubsetCompositeClosure(t *testing.T) {
 	f := loadFull(t)
 	// "é"（U+00E9）通常是 e +  acute 的复合字形

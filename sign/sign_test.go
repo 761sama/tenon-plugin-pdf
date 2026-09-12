@@ -16,7 +16,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// buildSignableDoc 生成带签名占位符的文档。
+// 生成带签名占位符的文档。
 func buildSignableDoc(t *testing.T) []byte {
 	t.Helper()
 	doc := pdf.New()
@@ -31,6 +31,7 @@ func buildSignableDoc(t *testing.T) []byte {
 	return data
 }
 
+// RSA 签署与验签全流程：有效签名通过校验，篡改内容或签名值必须失效，并用 pdfsig 外部交叉验证。
 func TestSignAndVerifyRSA(t *testing.T) {
 	key, err := sign.GenerateRSAKey()
 	if err != nil {
@@ -95,6 +96,7 @@ func TestSignAndVerifyRSA(t *testing.T) {
 	}
 }
 
+// ECDSA 密钥签署与验签，验证签名有效性。
 func TestSignAndVerifyECDSA(t *testing.T) {
 	key, err := sign.GenerateECDSAKey()
 	if err != nil {
@@ -117,7 +119,7 @@ func TestSignAndVerifyECDSA(t *testing.T) {
 	}
 }
 
-// TestSignOpenSSL 用 openssl 独立验证 CMS 结构与摘要。
+// 用 openssl 独立验证 CMS 结构与摘要。
 func TestSignOpenSSL(t *testing.T) {
 	if _, err := exec.LookPath("openssl"); err != nil {
 		t.Skip("openssl 不可用")
@@ -210,6 +212,7 @@ func TestVerifyTrailingZeroCMS(t *testing.T) {
 	}
 }
 
+// 对未签名的文档调用 Verify 必须报错。
 func TestVerifyUnsigned(t *testing.T) {
 	doc := pdf.New()
 	doc.AddPage(page.A4)

@@ -148,7 +148,7 @@ func TestSignExistingXRefStreamExternal(t *testing.T) {
 	}
 }
 
-// TestSignExistingXRefStreamPyhanko pyhanko 交叉验证（python + pyhanko 可用时）。
+// pyhanko 交叉验证（python + pyhanko 可用时）。
 func TestSignExistingXRefStreamPyhanko(t *testing.T) {
 	lookPath(t, "qpdf")
 	py, err := exec.LookPath("python")

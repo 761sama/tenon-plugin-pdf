@@ -10,6 +10,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
+// 构造测试用示例列配置：3 列定宽、2 列自动均分。
 func sampleCols() []Column {
 	return []Column{
 		{Title: "No.", Width: 40, Align: text.AlignCenter},
@@ -20,6 +21,7 @@ func sampleCols() []Column {
 	}
 }
 
+// 测试列宽计算：定宽列保持不变，剩余宽度由自动列均分。
 func TestColWidths(t *testing.T) {
 	tb := New(sampleCols()...)
 	ws := tb.colWidths(460, nil)
@@ -42,6 +44,7 @@ func TestColWidths(t *testing.T) {
 	}
 }
 
+// 测试行高计算：单行为默认行高加内边距，长文本换行后行变高。
 func TestRowHeight(t *testing.T) {
 	tb := New(Column{Width: 100}, Column{Width: 100})
 	h := tb.rowHeight([]string{"a", "b"}, []float64{100, 100})
@@ -57,6 +60,7 @@ func TestRowHeight(t *testing.T) {
 	}
 }
 
+// 测试单页绘制：表格不分页，内容流包含表头灰底、单元格文本与边框矩形。
 func TestDrawSinglePage(t *testing.T) {
 	tb := New(sampleCols()...)
 	tb.AddRow("1", "Widget", "10", "9.99", "in stock")
@@ -87,6 +91,7 @@ func TestDrawSinglePage(t *testing.T) {
 	}
 }
 
+// 测试跨页时表头在每页重复绘制，且重复次数等于页数。
 func TestPaginationRepeatsHeader(t *testing.T) {
 	tb := New(sampleCols()...)
 	for i := 1; i <= 100; i++ {
@@ -124,6 +129,7 @@ func TestPaginationRepeatsHeader(t *testing.T) {
 	}
 }
 
+// 测试超过整页高度的行不会导致死循环，分页次数有上限。
 func TestOversizeRowNoInfiniteLoop(t *testing.T) {
 	tb := New(Column{Title: "A", Width: 100})
 	tb.AddRow("x")
@@ -143,6 +149,7 @@ func TestOversizeRowNoInfiniteLoop(t *testing.T) {
 	_ = endY
 }
 
+// 测试所有列标题为空时不绘制表头背景。
 func TestNoHeaderWhenAllTitlesEmpty(t *testing.T) {
 	tb := New(Column{Width: 100}, Column{Width: 100})
 	tb.AddRow("a", "b")
@@ -153,6 +160,7 @@ func TestNoHeaderWhenAllTitlesEmpty(t *testing.T) {
 	}
 }
 
+// 测试自定义样式（字体、字号、内边距、表头与行背景色）生效。
 func TestCustomStyle(t *testing.T) {
 	tb := New(Column{Title: "H", Width: 100})
 	tb.Font = font.TimesRoman
@@ -172,6 +180,7 @@ func TestCustomStyle(t *testing.T) {
 	}
 }
 
+// 将非负整数转为十进制字符串（避免引入 strconv 依赖）。
 func itoa(v int) string {
 	if v == 0 {
 		return "0"

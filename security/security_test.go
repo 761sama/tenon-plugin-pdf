@@ -14,6 +14,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/security"
 )
 
+// 构造标准密码加密文档（入参：加密级别、用户/所有者密码、权限；返回生成的 PDF 字节）。
 func buildEncryptedDoc(t *testing.T, level security.Level, user, owner string, perms security.Permission) []byte {
 	t.Helper()
 	doc := pdf.New()
@@ -33,6 +34,7 @@ func buildEncryptedDoc(t *testing.T, level security.Level, user, owner string, p
 	return data
 }
 
+// 测试加密字典结构：AES128/AES256 各版本标记齐全、内容流已加密、trailer 含 /Encrypt。
 func TestEncryptDictStructure(t *testing.T) {
 	for _, level := range []security.Level{security.AES128, security.AES256} {
 		data := buildEncryptedDoc(t, level, "user123", "owner456", security.PermAll&^security.PermCopy)
@@ -58,7 +60,7 @@ func TestEncryptDictStructure(t *testing.T) {
 	}
 }
 
-// TestEncryptWithPoppler 用 poppler 工具外部验证：识别加密、密码解析、权限。
+// 用 poppler 工具外部验证：识别加密、密码解析、权限。
 func TestEncryptWithPoppler(t *testing.T) {
 	if _, err := exec.LookPath("pdfinfo"); err != nil {
 		t.Skip("pdfinfo 不可用")

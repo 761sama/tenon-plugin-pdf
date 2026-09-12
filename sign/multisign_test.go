@@ -93,7 +93,7 @@ func TestMultiSign(t *testing.T) {
 	}
 }
 
-// TestIncrementalVisibleSignature 增量追加的可见签名：外观流随修订段嵌入。
+// 增量追加的可见签名：外观流随修订段嵌入。
 func TestIncrementalVisibleSignature(t *testing.T) {
 	doc := pdf.New()
 	p := doc.AddPage(page.A4)

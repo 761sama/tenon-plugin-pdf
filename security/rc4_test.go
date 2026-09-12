@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// 用已知测试向量验证 RC4 实现正确性。
 func TestRC4Vector(t *testing.T) {
 	// RC4 已知测试向量：Key="Key"，明文 "Plaintext"
 	got := rc4([]byte("Key"), []byte("Plaintext"))
@@ -20,6 +21,7 @@ func TestRC4Vector(t *testing.T) {
 	}
 }
 
+// 测试密码填充/截断规则：短密码按规范填充至 32 字节，长密码截断为 32 字节。
 func TestPadPassword(t *testing.T) {
 	p := padPassword("abc")
 	if len(p) != 32 || string(p[:3]) != "abc" || p[3] != 0x28 {
@@ -30,6 +32,7 @@ func TestPadPassword(t *testing.T) {
 	}
 }
 
+// 测试权限位 P 值计算：全权限为 -4，去除复制权限后相应位被清除。
 func TestPValue(t *testing.T) {
 	h := &Handler{opts: Options{Permissions: PermAll}}
 	if h.pValue() != -4 {

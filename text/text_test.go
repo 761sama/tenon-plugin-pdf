@@ -6,6 +6,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/font"
 )
 
+// 测试按宽度将文本折行为多行，各单词完整保留。
 func TestWrap(t *testing.T) {
 	// Courier 12pt：每字符 7.2pt；宽度 36pt 一行只能放 5 个字符
 	lines := Wrap(font.Courier, 12, 36, "aaa bbb ccc")
@@ -25,6 +26,7 @@ func TestWrap(t *testing.T) {
 	}
 }
 
+// 测试超过行宽的长单词被按字符硬拆分。
 func TestWrapLongWord(t *testing.T) {
 	lines := Wrap(font.Courier, 12, 36, "abcdefghij") // 10 字符需拆成 5+5
 	if len(lines) != 2 || lines[0] != "abcde" || lines[1] != "fghij" {
@@ -32,6 +34,7 @@ func TestWrapLongWord(t *testing.T) {
 	}
 }
 
+// 测试文本中的显式换行符被拆分为独立行。
 func TestWrapNewlines(t *testing.T) {
 	lines := Wrap(font.Helvetica, 12, 1000, "a\nb")
 	if len(lines) != 2 || lines[0] != "a" || lines[1] != "b" {
@@ -39,12 +42,14 @@ func TestWrapNewlines(t *testing.T) {
 	}
 }
 
+// 测试空字符串折行返回一个空行而非空切片。
 func TestWrapEmpty(t *testing.T) {
 	if lines := Wrap(font.Helvetica, 12, 100, ""); len(lines) != 1 || lines[0] != "" {
 		t.Errorf("Wrap empty = %v", lines)
 	}
 }
 
+// 测试右对齐、居中、左对齐三种对齐方式的水平偏移量计算。
 func TestOffsetX(t *testing.T) {
 	w := font.Courier.TextWidth("abc", 12) // 3*7.2 = 21.6
 	if got := OffsetX(font.Courier, 12, 100, "abc", AlignRight); got != 100-w {
@@ -58,6 +63,7 @@ func TestOffsetX(t *testing.T) {
 	}
 }
 
+// 测试两端对齐时词间距的摊分计算，以及无空格行返回 0。
 func TestJustifyWordSpace(t *testing.T) {
 	line := "a b c"
 	ws := JustifyWordSpace(font.Courier, 12, 100, line)

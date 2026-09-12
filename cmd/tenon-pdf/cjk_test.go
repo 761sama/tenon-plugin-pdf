@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestCJKDemo 生成中文演示 PDF 并用外部工具验证中文渲染与文本反查。
+// 生成中文演示 PDF 并用外部工具验证中文渲染与文本反查。
 func TestCJKDemo(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "cjk.pdf")
 	if err := cmdCJK([]string{"-o", out, "-rows", "80"}); err != nil {

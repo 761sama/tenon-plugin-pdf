@@ -19,7 +19,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// makeTSACert 生成带 critical id-kp-timeStamping EKU 的 TSA 证书（RFC 3161 §2.3）。
+// 生成带 critical id-kp-timeStamping EKU 的 TSA 证书（RFC 3161 §2.3）。
 func makeTSACert(t *testing.T) (crypto.Signer, *x509.Certificate) {
 	t.Helper()
 	k, err := sign.GenerateRSAKey()
@@ -95,6 +95,7 @@ func extractTSTImprint(t *testing.T, token []byte) []byte {
 	return oct
 }
 
+// 在 b 中顺序查找子串 sub，返回首个匹配的下标，未找到返回 -1。
 func indexOf(b, sub []byte) int {
 	for i := 0; i+len(sub) <= len(b); i++ {
 		ok := true
@@ -111,7 +112,7 @@ func indexOf(b, sub []byte) int {
 	return -1
 }
 
-// readTLVLen 读取 TLV 头，返回内容长度与头部长度。
+// 读取 TLV 头，返回内容长度与头部长度。
 func readTLVLen(t *testing.T, b []byte) (contentLen, headerLen int) {
 	t.Helper()
 	if len(b) < 2 {
@@ -129,11 +130,13 @@ func readTLVLen(t *testing.T, b []byte) (contentLen, headerLen int) {
 	return l, 2 + n
 }
 
+// 计算 b 起始处 DER TLV 的总长度（头部长度 + 内容长度）。
 func tlvTotalLen(t *testing.T, b []byte) int {
 	cl, hl := readTLVLen(t, b)
 	return hl + cl
 }
 
+// 带 RFC 3161 时间戳的签署与验签：校验时间戳 imprint 一致性与时间合理性、无 TSA 时 Timestamp 为 nil，并用 pdfsig / openssl 外部交叉验证。
 func TestTimestamp(t *testing.T) {
 	tsaKey, tsaCert := makeTSACert(t)
 	srv := httptest.NewServer(sign.MockTSAHandler(tsaKey, tsaCert))

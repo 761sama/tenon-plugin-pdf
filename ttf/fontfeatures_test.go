@@ -29,6 +29,7 @@ func makeTTC(fonts ...[]byte) []byte {
 	return out
 }
 
+// 测试合成 TTC 集合的识别与解析：集合判别、成员解析、越界索引报错、单字体兼容路径及名称列表。
 func TestSyntheticCollection(t *testing.T) {
 	data, err := os.ReadFile(assetPath)
 	if err != nil {
@@ -72,7 +73,7 @@ func TestSyntheticCollection(t *testing.T) {
 	}
 }
 
-// TestRealCollection 用系统 AR PL UMing 集合（存在时）做真实验证。
+// 用系统 AR PL UMing 集合（存在时）做真实验证。
 func TestRealCollection(t *testing.T) {
 	data, err := os.ReadFile("/usr/share/fonts/truetype/arphic/uming.ttc")
 	if err != nil {
@@ -94,7 +95,7 @@ func TestRealCollection(t *testing.T) {
 	}
 }
 
-// TestCFFCollectionRejected CFF 轮廓的集合成员应报“不支持的格式”。
+// CFF 轮廓的集合成员应报“不支持的格式”。
 func TestCFFCollectionRejected(t *testing.T) {
 	data, err := os.ReadFile("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc")
 	if err != nil {
@@ -110,6 +111,7 @@ func TestCFFCollectionRejected(t *testing.T) {
 	}
 }
 
+// 测试从 OS/2 表读取 CapHeight（仓库自带子集字体应为 733）。
 func TestCapHeight(t *testing.T) {
 	// 仓库自带子集字体 OS/2 v4，sCapHeight=733
 	data, err := os.ReadFile(assetPath)
@@ -125,6 +127,7 @@ func TestCapHeight(t *testing.T) {
 	}
 }
 
+// 测试 kern 表解析：字距对 "AV" 应收紧（负值），无调整的字距对返回 0。
 func TestKernTable(t *testing.T) {
 	data, err := os.ReadFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
 	if err != nil {
@@ -149,6 +152,7 @@ func TestKernTable(t *testing.T) {
 	t.Logf("Kern(A,V) = %d 字体单位", k)
 }
 
+// 测试 GSUB 连字规则解析：连字按组件数降序排列，且存在 f+i 连字。
 func TestGSUBLigatures(t *testing.T) {
 	data, err := os.ReadFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
 	if err != nil {
@@ -188,7 +192,7 @@ func TestGSUBLigatures(t *testing.T) {
 	}
 }
 
-// TestSubsetCmap12 非 BMP 码点应写入 format 12 子表并可反查。
+// 非 BMP 码点应写入 format 12 子表并可反查。
 func TestSubsetCmap12(t *testing.T) {
 	f := loadFull(t)
 	// 从字体自身的 cmap12 里找一个非 BMP 码点

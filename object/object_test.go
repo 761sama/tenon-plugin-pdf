@@ -2,6 +2,7 @@ package object
 
 import "testing"
 
+// 测试标量对象（null、布尔、整数、实数、名称）的序列化及名称特殊字符转义。
 func TestScalarEncode(t *testing.T) {
 	cases := []struct {
 		o    Object
@@ -26,6 +27,7 @@ func TestScalarEncode(t *testing.T) {
 	}
 }
 
+// 测试字符串与十六进制字符串对象的序列化，含括号、反斜杠转义及非 ASCII 字节的八进制表示。
 func TestStringEncode(t *testing.T) {
 	cases := []struct {
 		o    Object
@@ -45,6 +47,7 @@ func TestStringEncode(t *testing.T) {
 	}
 }
 
+// 测试数组对象序列化，nil 元素输出为 null。
 func TestArrayEncode(t *testing.T) {
 	a := Array{Int(1), Str("x"), nil}
 	want := `[1 (x) null]`
@@ -53,6 +56,7 @@ func TestArrayEncode(t *testing.T) {
 	}
 }
 
+// 测试字典对象序列化及 Set 保序替换、Get、Delete 操作。
 func TestDictEncode(t *testing.T) {
 	d := NewDict()
 	d.Set("Type", Name("Page"))
@@ -76,6 +80,7 @@ func TestDictEncode(t *testing.T) {
 	}
 }
 
+// 测试流对象序列化，自动写入 /Length 并拼接 stream/endstream 数据。
 func TestStreamEncode(t *testing.T) {
 	s := NewStream([]byte("BT /F1 12 Tf ET"))
 	s.Dict.Set("Filter", Name("FlateDecode"))
@@ -85,6 +90,7 @@ func TestStreamEncode(t *testing.T) {
 	}
 }
 
+// 测试间接引用对象序列化为 "N G R" 形式。
 func TestRefEncode(t *testing.T) {
 	r := Ref{Num: 12, Gen: 0}
 	if got := string(Serialize(r)); got != "12 0 R" {

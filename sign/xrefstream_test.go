@@ -180,6 +180,7 @@ func appendXrefStreamRevision(doc []byte, prevXref int, redefine map[int]string,
 	return buf.Bytes(), xrefPos
 }
 
+// 对 data 做 zlib(Flate) 压缩，返回压缩后的字节。
 func flateCompress(data []byte) []byte {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
@@ -188,7 +189,7 @@ func flateCompress(data []byte) []byte {
 	return b.Bytes()
 }
 
-// xsPlainObjs 单页文档的普通对象（Catalog/Pages/Page 可整体放入对象流）。
+// 单页文档的普通对象（Catalog/Pages/Page 可整体放入对象流）。
 func xsPlainObjs() map[int]string {
 	content := "BT /F1 12 Tf 72 770 Td (XRef stream contract content) Tj ET"
 	return map[int]string{
@@ -199,6 +200,7 @@ func xsPlainObjs() map[int]string {
 	}
 }
 
+// 单页文档中需压入对象流的对象（Catalog/Pages）。
 func xsCompObjs() map[int]string {
 	return map[int]string{
 		1: "<< /Type /Catalog /Pages 2 0 R >>",
@@ -237,7 +239,7 @@ func TestSignExistingXRefStream(t *testing.T) {
 	}
 }
 
-// TestSignExistingObjStm Catalog/Pages 压缩在对象流中（页面为普通对象）。
+// Catalog/Pages 压缩在对象流中（页面为普通对象）。
 func TestSignExistingObjStm(t *testing.T) {
 	data, _ := buildXrefStreamPDF(xsPlainObjs(), 5, xsCompObjs(), 1, xsOpts{flateStm: true})
 	key, _ := sign.GenerateECDSAKey()
@@ -255,7 +257,7 @@ func TestSignExistingObjStm(t *testing.T) {
 	}
 }
 
-// TestSignExistingObjStmPage 页面对象也压缩在对象流中。
+// 页面对象也压缩在对象流中。
 func TestSignExistingObjStmPage(t *testing.T) {
 	plain := map[int]string{
 		4: xsPlainObjs()[4],
@@ -313,7 +315,7 @@ func TestSignExistingXRefChain(t *testing.T) {
 	}
 }
 
-// TestSignExistingXRefStreamVisible 可见签名（外观流随修订段嵌入）。
+// 可见签名（外观流随修订段嵌入）。
 func TestSignExistingXRefStreamVisible(t *testing.T) {
 	plain := xsPlainObjs()
 	plain[1] = "<< /Type /Catalog /Pages 2 0 R >>"
@@ -339,7 +341,7 @@ func TestSignExistingXRefStreamVisible(t *testing.T) {
 	}
 }
 
-// TestSignExistingXRefStreamMulti xref 流文档会签：两次签署均有效。
+// xref 流文档会签：两次签署均有效。
 func TestSignExistingXRefStreamMulti(t *testing.T) {
 	plain := xsPlainObjs()
 	plain[1] = "<< /Type /Catalog /Pages 2 0 R >>"
@@ -441,7 +443,7 @@ func TestSignExistingHybridXRefStm(t *testing.T) {
 	}
 }
 
-// TestSignExistingXRefStreamEncrypted 加密的 xref 流文档 → 明确中文错误。
+// 加密的 xref 流文档 → 明确中文错误。
 func TestSignExistingXRefStreamEncrypted(t *testing.T) {
 	plain := xsPlainObjs()
 	plain[1] = "<< /Type /Catalog /Pages 2 0 R >>"
@@ -456,7 +458,7 @@ func TestSignExistingXRefStreamEncrypted(t *testing.T) {
 	}
 }
 
-// TestSignExistingXRefStreamCorrupt 损坏/截断的 xref 流文档 → 明确错误，不 panic。
+// 损坏/截断的 xref 流文档 → 明确错误，不 panic。
 func TestSignExistingXRefStreamCorrupt(t *testing.T) {
 	plain := xsPlainObjs()
 	plain[1] = "<< /Type /Catalog /Pages 2 0 R >>"

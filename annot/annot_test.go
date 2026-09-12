@@ -12,6 +12,7 @@ var testResolver Resolver = func(d Destination) object.Object {
 	return object.Array{object.Ref{Num: 5}, object.Name("XYZ"), object.Null, object.Real(700), object.Null}
 }
 
+// 测试 URI 链接注释字典的生成，含 /URI、/Rect 与默认无边框。
 func TestLinkURI(t *testing.T) {
 	l := LinkURI{
 		Base: Base{Rect: [4]float64{10, 10, 100, 30}, Contents: "go"},
@@ -25,6 +26,7 @@ func TestLinkURI(t *testing.T) {
 	}
 }
 
+// 测试页面跳转链接注释，校验 /Dest 目标数组经 Resolver 解析后的序列化结果。
 func TestLinkGoTo(t *testing.T) {
 	l := LinkGoTo{
 		Base: Base{Rect: [4]float64{0, 0, 50, 20}},
@@ -36,6 +38,7 @@ func TestLinkGoTo(t *testing.T) {
 	}
 }
 
+// 测试文本注释（便签）字典生成，中文内容以 UTF-16BE 十六进制编码。
 func TestNote(t *testing.T) {
 	n := Note{Base: Base{Rect: [4]float64{0, 0, 20, 20}, Contents: "备注"}, Title: "审阅者"}
 	s := string(n.Dict(testResolver).Encode(nil))
@@ -48,6 +51,7 @@ func TestNote(t *testing.T) {
 	}
 }
 
+// 测试高亮/下划线等标记注释的 QuadPoints 计算与默认/自定义颜色输出。
 func TestMarkup(t *testing.T) {
 	m := Markup{Base: Base{Rect: [4]float64{10, 20, 110, 32}}, Kind: Highlight}
 	s := string(m.Dict(testResolver).Encode(nil))

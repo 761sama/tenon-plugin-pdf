@@ -10,6 +10,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/writer"
 )
 
+// 测试构建 AcroForm：文本域、复选框的字典、外观流与字体资源输出，以及部件注释登记到页面。
 func TestBuildForm(t *testing.T) {
 	pg := page.New(page.A4)
 	fields := []Field{
@@ -60,6 +61,7 @@ func TestBuildForm(t *testing.T) {
 	}
 }
 
+// 测试文本域的 Ff 标志位：多行、密码、只读、必填对应位均被置位。
 func TestTextFieldFlags(t *testing.T) {
 	pg := page.New(page.A4)
 	f := &TextField{
@@ -74,6 +76,7 @@ func TestTextFieldFlags(t *testing.T) {
 	}
 }
 
+// 测试数字格式化：整数不带小数点、小数去掉多余尾零。
 func TestNumStr(t *testing.T) {
 	if numStr(0) != "0" || numStr(12) != "12" || numStr(10.5) != "10.5" {
 		t.Errorf("numStr: %q %q %q", numStr(0), numStr(12), numStr(10.5))

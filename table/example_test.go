@@ -9,7 +9,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
-// ExampleTable_mergedCells 演示单元格合并（跨列/跨行）与内容自适应列宽。
+// 演示单元格合并（跨列/跨行）与内容自适应列宽。
 func ExampleTable_mergedCells() {
 	doc := pdf.New()
 	p := doc.AddPage(page.A4)

@@ -20,6 +20,7 @@ func TestRotateMatrix(t *testing.T) {
 	}
 }
 
+// 测试图形状态、变换矩阵、路径构造等操作符的链式调用序列化输出。
 func TestGraphicsOps(t *testing.T) {
 	b := New()
 	b.SaveState().
@@ -45,6 +46,7 @@ func TestGraphicsOps(t *testing.T) {
 	}
 }
 
+// 测试描边、填充、奇偶填充及裁剪等绘制操作符的输出。
 func TestPaintOps(t *testing.T) {
 	b := New()
 	b.Stroke().Fill().FillEvenOdd().FillStroke().FillStrokeEvenOdd().
@@ -55,6 +57,7 @@ func TestPaintOps(t *testing.T) {
 	}
 }
 
+// 测试 BT/ET 文本块内字体、位置、间距、渲染模式及文本显示操作符的输出。
 func TestTextOps(t *testing.T) {
 	b := New()
 	b.BeginText().
@@ -76,6 +79,7 @@ func TestTextOps(t *testing.T) {
 	}
 }
 
+// 测试绘制图像生成 q/cm/Do/Q 序列，按指定位置与尺寸放置。
 func TestDrawImage(t *testing.T) {
 	b := New().DrawImage("Im1", 10, 20, 300, 200)
 	want := "q\n300 0 0 200 10 20 cm\n/Im1 Do\nQ\n"

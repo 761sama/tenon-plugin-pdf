@@ -26,6 +26,7 @@ import (
 
 // --- 测试辅助：最小 DER 编码（用于构建 OCSP 响应） ---
 
+// 生成单个 DER TLV 编码（tag + 长度 + 内容）。
 func dT(tag byte, content []byte) []byte {
 	out := []byte{tag}
 	n := len(content)
@@ -42,11 +43,14 @@ func dT(tag byte, content []byte) []byte {
 	return append(out, content...)
 }
 
+// 拼接多个 DER 片段。
 func dCat(parts ...[]byte) []byte {
 	return bytes.Join(parts, nil)
 }
+// 生成 DER SEQUENCE（0x30）包裹的片段序列。
 func dSeq(parts ...[]byte) []byte { return dT(0x30, dCat(parts...)) }
 
+// 生成 DER OID 编码，入参为 OID 各段数值。
 func dOID(oids ...int) []byte {
 	body := []byte{byte(oids[0]*40 + oids[1])}
 	for _, v := range oids[2:] {
@@ -59,6 +63,7 @@ func dOID(oids ...int) []byte {
 	return dT(0x06, body)
 }
 
+// 生成 DER INTEGER 编码，必要时补前导零保证为正数。
 func dInt(v *big.Int) []byte {
 	b := v.Bytes()
 	if len(b) == 0 {
@@ -70,6 +75,7 @@ func dInt(v *big.Int) []byte {
 	return dT(0x02, b)
 }
 
+// 生成 DER GeneralizedTime（0x18）编码。
 func dGenTime(t time.Time) []byte { return dT(0x18, []byte(t.UTC().Format("20060102150405Z"))) }
 
 // buildOCSPResponse 构建最小 BasicOCSPResponse（good 状态），用 responder 密钥签名。
@@ -124,7 +130,7 @@ func buildOCSPResponse(t *testing.T, cert, issuer *x509.Certificate,
 	)
 }
 
-// TestLTV DSS 字典嵌入证书链 + CRL + OCSP 响应（长期验证材料）。
+// DSS 字典嵌入证书链 + CRL + OCSP 响应（长期验证材料）。
 func TestLTV(t *testing.T) {
 	// 构造 根CA → 签名者 证书链
 	rootKey, _ := sign.GenerateRSAKey()

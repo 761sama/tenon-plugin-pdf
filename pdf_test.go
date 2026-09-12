@@ -23,7 +23,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
-// testImage 生成带透明通道的测试 PNG。
+// 生成带透明通道的测试 PNG。
 func testImage(t *testing.T) *image.Image {
 	t.Helper()
 	img := stdimage.NewNRGBA(stdimage.Rect(0, 0, 60, 40))
@@ -43,6 +43,7 @@ func testImage(t *testing.T) *image.Image {
 	return im
 }
 
+// 生成测试用 JPEG 图像。
 func testJPEG(t *testing.T) *image.Image {
 	t.Helper()
 	img := stdimage.NewRGBA(stdimage.Rect(0, 0, 80, 50))
@@ -62,7 +63,7 @@ func testJPEG(t *testing.T) *image.Image {
 	return im
 }
 
-// buildSampleDoc 构造一个覆盖主要功能的文档。
+// 构造一个覆盖主要功能的文档。
 func buildSampleDoc(t *testing.T) *pdf.Document {
 	t.Helper()
 	doc := pdf.New()
@@ -151,6 +152,7 @@ func buildSampleDoc(t *testing.T) *pdf.Document {
 	return doc
 }
 
+// 生成覆盖主要功能的示例文档，校验 PDF 头尾与关键结构，并用外部工具（pdfinfo/pdftotext）验证页数与文本提取。
 func TestDocumentRoundTrip(t *testing.T) {
 	doc := buildSampleDoc(t)
 	data, err := doc.Bytes()
@@ -213,6 +215,7 @@ func TestDocumentRoundTrip(t *testing.T) {
 	}
 }
 
+// 验证没有任何页面的空文档序列化时报错。
 func TestEmptyDocument(t *testing.T) {
 	doc := pdf.New()
 	if _, err := doc.Bytes(); err == nil {
@@ -220,6 +223,7 @@ func TestEmptyDocument(t *testing.T) {
 	}
 }
 
+// 验证 SaveFile 能将文档正确写出为非空 PDF 文件。
 func TestSaveFile(t *testing.T) {
 	doc := pdf.New()
 	p := doc.AddPage(page.Letter)
@@ -234,6 +238,7 @@ func TestSaveFile(t *testing.T) {
 	}
 }
 
+// 验证关闭压缩后内容流以明文写入，文本操作符可见。
 func TestUncompressed(t *testing.T) {
 	doc := pdf.New()
 	doc.SetCompress(false)
@@ -249,7 +254,7 @@ func TestUncompressed(t *testing.T) {
 	}
 }
 
-// TestCJKDocument 验证中文嵌入子集字体：渲染、分页与 ToUnicode 反查。
+// 验证中文嵌入子集字体：渲染、分页与 ToUnicode 反查。
 func TestCJKDocument(t *testing.T) {
 	cjk, err := font.LoadCJKFile("cmd/tenon-pdf/assets/NotoSansSC-Subset.ttf")
 	if err != nil {

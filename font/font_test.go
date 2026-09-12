@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// 测试 WinAnsi 编码：不可映射字符转为 '?'，特殊符号映射正确且可回读
 func TestWinAnsiEncode(t *testing.T) {
 	enc := Helvetica.Encode("Hello, 世界 € — “x”")
 	want := []byte("Hello, ")
@@ -19,6 +20,7 @@ func TestWinAnsiEncode(t *testing.T) {
 	}
 }
 
+// 测试 Latin-1 区间字符编码为对应单字节（恒等映射）
 func TestWinAnsiLatin1(t *testing.T) {
 	// Latin-1 区间恒等映射
 	enc := Helvetica.Encode("éèê à £")
@@ -28,6 +30,7 @@ func TestWinAnsiLatin1(t *testing.T) {
 	}
 }
 
+// 测试字宽计算：Helvetica/Courier 的 AFM 宽度及 TextWidth 按字号缩放
 func TestWidths(t *testing.T) {
 	// Helvetica 标准 AFM 值：space=278，M=833
 	if got := Helvetica.WidthOf(" "); got != 278 {
@@ -49,6 +52,7 @@ func TestWidths(t *testing.T) {
 	}
 }
 
+// 测试标准 14 字体度量合理性：Ascent 为正、Descent 为负、含 'A' 宽度
 func TestMetricsSanity(t *testing.T) {
 	for _, f := range Standard14()[:12] {
 		if f.metrics.Ascent <= 0 || f.metrics.Descent >= 0 {
@@ -60,6 +64,7 @@ func TestMetricsSanity(t *testing.T) {
 	}
 }
 
+// 测试字体字典内容：Helvetica 含 Type1/WinAnsi/Widths，Symbol 省略 Encoding 与 Widths
 func TestFontDict(t *testing.T) {
 	d := Helvetica.Dict()
 	s := string(d.Encode(nil))

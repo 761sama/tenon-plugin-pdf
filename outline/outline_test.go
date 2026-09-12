@@ -11,6 +11,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/writer"
 )
 
+// 测试构建大纲树：层级/计数、折叠标志、加粗与颜色样式、目标数组及中文标题的 UTF-16BE 编码。
 func TestBuild(t *testing.T) {
 	var o Outline
 	if !o.Empty() {

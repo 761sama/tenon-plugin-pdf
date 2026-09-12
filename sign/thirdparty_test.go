@@ -49,7 +49,7 @@ func buildClassicPDF(objs map[int]string, rootNum int, extraTrailer, newline str
 	return buf.Bytes()
 }
 
-// thirdPartyObjs 单页第三方文档（无 AcroForm，页面含一行 Helvetica 文本）。
+// 单页第三方文档（无 AcroForm，页面含一行 Helvetica 文本）。
 func thirdPartyObjs() map[int]string {
 	content := "BT /F1 12 Tf 72 770 Td (Third-party contract content) Tj ET"
 	return map[int]string{
@@ -62,7 +62,7 @@ func thirdPartyObjs() map[int]string {
 	}
 }
 
-// TestSignExistingThirdParty 无 AcroForm 的第三方 PDF：SignExisting 一步签署。
+// 无 AcroForm 的第三方 PDF：SignExisting 一步签署。
 func TestSignExistingThirdParty(t *testing.T) {
 	data := buildClassicPDF(thirdPartyObjs(), 1, "", "\n")
 	if bytes.Contains(data, []byte("/AcroForm")) {
@@ -103,7 +103,7 @@ func TestSignExistingThirdParty(t *testing.T) {
 	}
 }
 
-// TestSignExistingCRLF CRLF 换行的第三方文档。
+// CRLF 换行的第三方文档。
 func TestSignExistingCRLF(t *testing.T) {
 	data := buildClassicPDF(thirdPartyObjs(), 1, "", "\r\n")
 	key, _ := sign.GenerateECDSAKey()
@@ -121,7 +121,7 @@ func TestSignExistingCRLF(t *testing.T) {
 	}
 }
 
-// TestSignExistingNestedPageTree 嵌套页树（Pages → Pages → Page）。
+// 嵌套页树（Pages → Pages → Page）。
 func TestSignExistingNestedPageTree(t *testing.T) {
 	objs := thirdPartyObjs()
 	objs[2] = "<< /Type /Pages /Kids [5 0 R] /Count 2 >>"
@@ -151,7 +151,7 @@ func TestSignExistingNestedPageTree(t *testing.T) {
 	}
 }
 
-// TestSignExistingInlineAcroForm Catalog 内联 AcroForm 字典的第三方文档。
+// Catalog 内联 AcroForm 字典的第三方文档。
 func TestSignExistingInlineAcroForm(t *testing.T) {
 	objs := thirdPartyObjs()
 	objs[1] = "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [] /DR << /Font << >> >> >> >>"
@@ -171,7 +171,7 @@ func TestSignExistingInlineAcroForm(t *testing.T) {
 	}
 }
 
-// TestSignExistingVisible 第三方文档的可见签名（外观流随修订段嵌入）。
+// 第三方文档的可见签名（外观流随修订段嵌入）。
 func TestSignExistingVisible(t *testing.T) {
 	data := buildClassicPDF(thirdPartyObjs(), 1, "", "\n")
 	key, _ := sign.GenerateRSAKey()
@@ -196,7 +196,7 @@ func TestSignExistingVisible(t *testing.T) {
 	}
 }
 
-// TestSignExistingMulti 第三方文档会签：两次 SignExisting，前序签名保持有效。
+// 第三方文档会签：两次 SignExisting，前序签名保持有效。
 func TestSignExistingMulti(t *testing.T) {
 	data := buildClassicPDF(thirdPartyObjs(), 1, "", "\n")
 	signed := data
@@ -224,7 +224,7 @@ func TestSignExistingMulti(t *testing.T) {
 	}
 }
 
-// TestSignExistingErrors 不支持的输入应给出明确错误。
+// 不支持的输入应给出明确错误。
 func TestSignExistingErrors(t *testing.T) {
 	key, _ := sign.GenerateRSAKey()
 	cert, _ := sign.GenerateSelfSigned("X", key)
@@ -252,7 +252,7 @@ func TestSignExistingErrors(t *testing.T) {
 	}
 }
 
-// TestSignExistingExternal 外部工具交叉验证（pdfsig 可用时）。
+// 外部工具交叉验证（pdfsig 可用时）。
 func TestSignExistingExternal(t *testing.T) {
 	if _, err := exec.LookPath("pdfsig"); err != nil {
 		t.Skip("pdfsig 不可用")

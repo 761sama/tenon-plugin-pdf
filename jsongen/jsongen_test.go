@@ -10,7 +10,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/font"
 )
 
-// TestBuildBuiltin 最小文档：内置字体 + 段落/表格/间隔/分页。
+// 最小文档：内置字体 + 段落/表格/间隔/分页。
 func TestBuildBuiltin(t *testing.T) {
 	reg := NewFontRegistry()
 	if err := reg.RegisterBuiltin("helv", "Helvetica"); err != nil {
@@ -57,7 +57,7 @@ func TestBuildBuiltin(t *testing.T) {
 	}
 }
 
-// TestErrors 非法输入：版本不符、字体未注册、JSON 内不得含字体路径语义。
+// 非法输入：版本不符、字体未注册、JSON 内不得含字体路径语义。
 func TestErrors(t *testing.T) {
 	reg := NewFontRegistry()
 	reg.RegisterBuiltin("helv", "Helvetica")
@@ -84,7 +84,7 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-// TestSanitize 零宽字符被剔除。
+// 零宽字符被剔除。
 func TestSanitize(t *testing.T) {
 	got := sanitizeText("\u7532\u200c\u4e59\u200d\u4e19\ufeff\u4e01")
 	want := "\u7532\u4e59\u4e19\u4e01"
@@ -93,7 +93,7 @@ func TestSanitize(t *testing.T) {
 	}
 }
 
-// TestContract 合同示例（需本机 Windows 字体；缺字体时跳过）。
+// 合同示例（需本机 Windows 字体；缺字体时跳过）。
 func TestContract(t *testing.T) {
 	simsun := `C:\Windows\Fonts\simsun.ttc`
 	simhei := `C:\Windows\Fonts\simhei.ttf`
@@ -128,7 +128,7 @@ func TestContract(t *testing.T) {
 	t.Logf("合同生成成功：%d 页，%.1f KB", doc.PageCount(), float64(len(b))/1024)
 }
 
-// TestWordWrap 换行：CJK 逐字可断、拉丁词不拆、超长词硬拆。
+// 换行：CJK 逐字可断、拉丁词不拆、超长词硬拆。
 func TestWordWrap(t *testing.T) {
 	reg := NewFontRegistry()
 	reg.RegisterBuiltin("helv", "Helvetica")
@@ -150,6 +150,7 @@ func TestWordWrap(t *testing.T) {
 	}
 }
 
+// 辅助函数：按 id 从字体注册表 reg 中取出字体资源，查找失败即终止测试 t；返回字体资源。
 func mustFont(t *testing.T, reg *FontRegistry, id string) font.Resource {
 	t.Helper()
 	f, err := reg.lookup(id)

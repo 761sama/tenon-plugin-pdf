@@ -8,6 +8,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/font"
 )
 
+// 测试预定义页面尺寸常量及横竖方向转换。
 func TestSizes(t *testing.T) {
 	if A4 != (Size{595.28, 841.89}) {
 		t.Errorf("A4 = %v", A4)
@@ -20,6 +21,7 @@ func TestSizes(t *testing.T) {
 	}
 }
 
+// 测试绘制文本生成的内容流及字体资源注册、复用去重。
 func TestDrawText(t *testing.T) {
 	p := New(A4)
 	p.DrawText(font.Helvetica, 12, 72, 720, "Hello")
@@ -37,6 +39,7 @@ func TestDrawText(t *testing.T) {
 	}
 }
 
+// 测试文本框自动换行绘制并返回占用高度。
 func TestTextBox(t *testing.T) {
 	p := New(A4)
 	h := p.TextBox(font.Courier, 12, 72, 720, 100, "aaa bbb ccc ddd eee", 0, 0)
@@ -48,6 +51,7 @@ func TestTextBox(t *testing.T) {
 	}
 }
 
+// 测试各类图形与渐变绘制，校验渐变资源数量及内容流中 q/Q 配对平衡。
 func TestShapesAndGradients(t *testing.T) {
 	p := New(A4)
 	p.SetFillColor(color.Red)
@@ -67,6 +71,7 @@ func TestShapesAndGradients(t *testing.T) {
 	}
 }
 
+// 测试相同透明度的 ExtGState 资源去重、不同透明度各自生成。
 func TestAlphaDedup(t *testing.T) {
 	p := New(A4)
 	p.SetAlpha(0.5, 0.5)
@@ -80,6 +85,7 @@ func TestAlphaDedup(t *testing.T) {
 	}
 }
 
+// 辅助函数：把布尔值转为 1/0，用于 q/Q 计数。b 为真时返回 1，否则返回 0。
 func boolInt(b bool) int {
 	if b {
 		return 1

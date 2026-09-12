@@ -2,6 +2,7 @@ package color
 
 import "testing"
 
+// 测试灰度、RGB、CMYK 颜色对应的操作数、填充/描边操作符与色彩空间名称。
 func TestColorOps(t *testing.T) {
 	cases := []struct {
 		c                             Color
@@ -18,6 +19,7 @@ func TestColorOps(t *testing.T) {
 	}
 }
 
+// 测试颜色构造函数：RGB255/Hex 换算及 RGBf、Gray 对越界分量的截断。
 func TestConstructors(t *testing.T) {
 	if RGB255(255, 0, 128).Operands() != "1 0 0.5019607843137255" {
 		t.Errorf("RGB255 = %q", RGB255(255, 0, 128).Operands())

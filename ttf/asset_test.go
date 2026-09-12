@@ -8,7 +8,7 @@ import (
 // assetPath 随仓库提交的思源黑体演示子集字体（本身也是合法 TTF）。
 const assetPath = "../cmd/tenon-pdf/assets/NotoSansSC-Subset.ttf"
 
-// TestSubsetAssetRoundTrip 对已子集化的字体再次解析与子集化。
+// 对已子集化的字体再次解析与子集化。
 func TestSubsetAssetRoundTrip(t *testing.T) {
 	data, err := os.ReadFile(assetPath)
 	if err != nil {

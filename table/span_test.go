@@ -10,6 +10,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
+// 测试跨列合并的网格展开：跨列单元格列位置与 ColSpan 正确，无跨行时不锁定分页边界。
 func TestColSpanGrid(t *testing.T) {
 	tb := New(
 		Column{Title: "A", Width: 50},
@@ -33,6 +34,7 @@ func TestColSpanGrid(t *testing.T) {
 	}
 }
 
+// 测试跨行合并的网格展开与行高：被占用列自动跳过、块内禁止分页、跨行文本超高时撑高末行使总高满足需求。
 func TestRowSpanGridAndHeight(t *testing.T) {
 	tb := New(Column{Width: 60}, Column{Width: 60}, Column{Width: 60})
 	// 第 1 行 A 列跨 3 行；后续行该列被自动跳过
@@ -68,6 +70,7 @@ func TestRowSpanGridAndHeight(t *testing.T) {
 	}
 }
 
+// 测试跨行数超出实际行数时 RowSpan 被截断。
 func TestRowSpanClamp(t *testing.T) {
 	tb := New(Column{Width: 50})
 	tb.AddRowCells(C("x").Span(1, 99)) // 超出行数 → 截断
@@ -77,6 +80,7 @@ func TestRowSpanClamp(t *testing.T) {
 	}
 }
 
+// 测试分页时跨行合并块不被拆分：合并单元格与其覆盖行始终在同一页。
 func TestRowSpanPaginationNotSplit(t *testing.T) {
 	tb := New(
 		Column{Title: "A", Width: 60},
@@ -113,6 +117,7 @@ func TestRowSpanPaginationNotSplit(t *testing.T) {
 	}
 }
 
+// 测试内容自适应列宽：定宽列不变，内容更宽的列分得更宽，各列总宽等于可用宽度。
 func TestAutoWidth(t *testing.T) {
 	// Courier 12pt：每字符 7.2pt，padding 默认 4 → "1234" 内容宽 4*7.2+8=36.8
 	tb := New(
@@ -141,6 +146,7 @@ func TestAutoWidth(t *testing.T) {
 	}
 }
 
+// 测试自适应列宽在内容超宽时按比例压缩：仍填满总宽且不低于最小宽度（最长单词宽度）。
 func TestAutoWidthShrink(t *testing.T) {
 	// 内容超宽时按比例压缩但不低于 minW（最长单词）
 	tb := New(Column{Title: "A"}, Column{Title: "B"})
@@ -160,6 +166,7 @@ func TestAutoWidthShrink(t *testing.T) {
 	}
 }
 
+// 测试含跨行/跨列合并单元格的表格绘制：合并文本与普通文本均渲染，返回的 endY 正确。
 func TestDrawWithSpans(t *testing.T) {
 	tb := New(
 		Column{Title: "Category", Width: 0},

@@ -9,6 +9,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/object"
 )
 
+// 测试写出最小 PDF 文件：头部、对象、xref 表、trailer、/ID 齐全，且 xref 偏移量正确指向对象起始处。
 func TestWriteMinimalFile(t *testing.T) {
 	w := New()
 	catalog := w.Alloc()
@@ -57,6 +58,7 @@ func TestWriteMinimalFile(t *testing.T) {
 	}
 }
 
+// 测试对象编号分配（Alloc/Add）及 Set 对占位对象的填充写入。
 func TestAllocSet(t *testing.T) {
 	w := New()
 	r1 := w.Alloc()

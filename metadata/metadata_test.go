@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// 测试文档信息字典生成：中文标题 UTF-16BE 编码、ASCII 字段原样输出、日期按 PDF 格式序列化。
 func TestInfoDict(t *testing.T) {
 	loc := time.FixedZone("CST", 8*3600)
 	i := &Info{
@@ -24,6 +25,7 @@ func TestInfoDict(t *testing.T) {
 	}
 }
 
+// 测试零值 Info 判定为空，且生成字典时始终附带默认 Producer。
 func TestEmpty(t *testing.T) {
 	i := &Info{}
 	if !i.Empty() {
@@ -35,6 +37,7 @@ func TestEmpty(t *testing.T) {
 	}
 }
 
+// 测试 XMP 元数据包生成及字段中 XML 特殊字符的转义。
 func TestXMP(t *testing.T) {
 	i := &Info{Title: "A&B", Author: "x<y>"}
 	s := string(i.XMP())
