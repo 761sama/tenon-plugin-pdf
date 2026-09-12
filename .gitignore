@@ -1,6 +1,14 @@
 # 密钥与凭据绝不进 git
 .env
 .env.*
+.history/
+
+# 编辑器配置
+.idea/
+.vscode/
+
+# 日志
+*.log
 
 # 构建产物
 build/*
