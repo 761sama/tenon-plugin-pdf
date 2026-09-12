@@ -8,13 +8,14 @@ import (
 
 // 手写 DER 编码（encoding/asn1 无法满足 CMS 的全部需求）。
 
-// derT 编码 TLV：tag + length + content。
+// 编码 TLV：tag + length + content。
 func derT(tag byte, content []byte) []byte {
 	out := []byte{tag}
 	out = append(out, derLen(len(content))...)
 	return append(out, content...)
 }
 
+// 编码 DER 长度域（短形/长形）。
 func derLen(n int) []byte {
 	if n < 128 {
 		return []byte{byte(n)}
@@ -26,9 +27,13 @@ func derLen(n int) []byte {
 	return append([]byte{0x80 | byte(len(b))}, b...)
 }
 
+// 编码 SEQUENCE（内容按序拼接）。
 func derSeq(parts ...[]byte) []byte { return derT(0x30, derConcat(parts...)) }
+
+// 编码 SET（内容按序拼接，调用方须保证 DER 排序）。
 func derSet(parts ...[]byte) []byte { return derT(0x31, derConcat(parts...)) }
 
+// 拼接多个 DER 片段。
 func derConcat(parts ...[]byte) []byte {
 	var out []byte
 	for _, p := range parts {
@@ -37,7 +42,7 @@ func derConcat(parts ...[]byte) []byte {
 	return out
 }
 
-// derOID 编码对象标识符。
+// 编码对象标识符。
 func derOID(oids ...int) []byte {
 	var body []byte
 	body = append(body, byte(oids[0]*40+oids[1]))
@@ -53,6 +58,7 @@ func derOID(oids ...int) []byte {
 	return derT(0x06, body)
 }
 
+// 编码 INTEGER（正数高位为 1 时补前导零避免负数误判）。
 func derInt(v *big.Int) []byte {
 	b := v.Bytes()
 	if len(b) == 0 {
@@ -64,13 +70,18 @@ func derInt(v *big.Int) []byte {
 	return derT(0x02, b)
 }
 
+// 编码 OCTET STRING。
 func derOctetString(b []byte) []byte { return derT(0x04, b) }
 
+// 编码 UTCTime（YYMMDDHHMMSSZ，UTC）。
 func derUTCTime(t time.Time) []byte {
 	return derT(0x17, []byte(t.UTC().Format("060102150405Z")))
 }
 
+// 编码 [0] EXPLICIT 上下文标签（内容完整包裹）。
 func derExplicit0(content []byte) []byte { return derT(0xa0, content) }
+
+// 编码 [0] IMPLICIT 上下文标签（内容直接替换原标签）。
 func derImplicit0(content []byte) []byte { return derT(0xa0, content) }
 
 var derNull = derT(0x05, nil)
@@ -83,7 +94,7 @@ type tlv struct {
 	raw     []byte
 }
 
-// readTLV 读取一个 TLV，返回它与剩余字节。
+// 读取一个 TLV，返回它与剩余字节。
 func readTLV(data []byte) (tlv, []byte, error) {
 	if len(data) < 2 {
 		return tlv{}, nil, fmt.Errorf("sign: DER 数据过短")
@@ -108,7 +119,7 @@ func readTLV(data []byte) (tlv, []byte, error) {
 	return tlv{tag: tag, content: data[hdrlen : hdrlen+l], raw: data[:hdrlen+l]}, data[hdrlen+l:], nil
 }
 
-// parseSeq 展开 SEQUENCE/SET/[0] 的内容为 TLV 列表。
+// 展开 SEQUENCE/SET/[0] 的内容为 TLV 列表。
 func parseSeq(data []byte) ([]tlv, error) {
 	var out []tlv
 	for len(data) > 0 {
@@ -122,7 +133,7 @@ func parseSeq(data []byte) ([]tlv, error) {
 	return out, nil
 }
 
-// oidEqual 比较 TLV 中的 OID 与给定 OID。
+// 比较 TLV 中的 OID 与给定 OID。
 func oidEqual(t tlv, oids ...int) bool {
 	want := derOID(oids...)
 	if t.tag != 0x06 || len(t.raw) != len(want) {

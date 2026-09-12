@@ -87,7 +87,7 @@ func buildIndex(doc []byte) (*docIndex, int, error) {
 	return idx, prevXref, nil
 }
 
-// mergeTrailer 把旧修订段的 trailer 字段并入（新段已有的键不覆盖）。
+// 把旧修订段的 trailer 字段并入（新段已有的键不覆盖）。
 func mergeTrailer(dst *trailerInfo, src *trailerInfo) {
 	if dst.size == 0 {
 		dst.size = src.size
@@ -114,7 +114,7 @@ type xrefSection struct {
 	xrefStm int // /XRefStm 偏移（混合段），0 表示无
 }
 
-// parseXrefSection 解析位于 pos 的 xref 段（自动判别经典表 / xref 流）。
+// 解析位于 pos 的 xref 段（自动判别经典表 / xref 流）。
 func parseXrefSection(doc []byte, pos int) (*xrefSection, error) {
 	if pos < 0 || pos+4 > len(doc) {
 		return nil, fmt.Errorf("sign: xref 段偏移 %d 越界（文件损坏或截断）", pos)
@@ -126,6 +126,7 @@ func parseXrefSection(doc []byte, pos int) (*xrefSection, error) {
 	return parseXrefStreamAt(doc, pos)
 }
 
+// 判断字节是否为 PDF 空白字符或定界符。
 func isWhiteOrDelim(b byte) bool {
 	switch b {
 	case 0, 9, 10, 12, 13, 32, '/', '<', '>', '[', ']', '(', ')', '{', '}', '%':
@@ -139,6 +140,7 @@ func isWhiteOrDelim(b byte) bool {
 // xrefEntryRe 匹配一条 xref 表条目（定宽数字 + n/f + 行尾，行尾容忍常见变体）。
 var xrefEntryRe = regexp.MustCompile(`^(\d{10}) (\d{5}) ([nf])(?:\r\n| \r\n| \n| \r|\n|\r| )`)
 
+// 解析 pos 处的经典交叉引用表（含子段与 trailer 字典）。
 func parseXrefTable(doc []byte, pos int) (*xrefSection, error) {
 	sec := &xrefSection{entries: map[int]xrefEntry{}, trailer: &trailerInfo{}}
 	p := pos + 4 // 跳过 "xref"
@@ -185,7 +187,7 @@ func parseXrefTable(doc []byte, pos int) (*xrefSection, error) {
 
 // --- xref 流（§7.5.8） ---
 
-// parseXrefStreamAt 解析位于 pos 的 xref 流对象。
+// 解析位于 pos 的 xref 流对象。
 func parseXrefStreamAt(doc []byte, pos int) (*xrefSection, error) {
 	num, dict, raw, err := readIndirectStream(doc, pos, nil)
 	if err != nil {
@@ -253,6 +255,7 @@ func parseXrefStreamAt(doc []byte, pos int) (*xrefSection, error) {
 	return sec, nil
 }
 
+// 返回 /Index 整数对中声明的条目总数（偶数位的 count 之和）。
 func totalCount(pairs []int) int {
 	n := 0
 	for k := 1; k < len(pairs); k += 2 {
@@ -261,7 +264,7 @@ func totalCount(pairs []int) int {
 	return n
 }
 
-// readBE 按大端读取最多 8 字节整数（宽 0 返回 0）。
+// 按大端读取最多 8 字节整数（宽 0 返回 0）。
 func readBE(b []byte) int {
 	n := 0
 	for _, c := range b {
@@ -270,7 +273,7 @@ func readBE(b []byte) int {
 	return n
 }
 
-// intArray 提取 /Key [n n n ...] 整数数组。
+// 提取 /Key [n n n ...] 整数数组。
 func intArray(body, key string) []int {
 	arr := arrayBody(body, key)
 	if arr == "" {
@@ -344,7 +347,7 @@ func readIndirectStream(doc []byte, pos int, idx *docIndex) (num int, dict strin
 	return num, dict, raw, nil
 }
 
-// decodeStreamData 按 /Filter（支持 FlateDecode）与 /DecodeParms /Predictor 解码流数据。
+// 按 /Filter（支持 FlateDecode）与 /DecodeParms /Predictor 解码流数据。
 func decodeStreamData(dict string, raw []byte) ([]byte, error) {
 	filters := filterNames(dict)
 	data := raw
@@ -379,7 +382,7 @@ func decodeStreamData(dict string, raw []byte) ([]byte, error) {
 	return data, nil
 }
 
-// filterNames 提取 /Filter 名（单名或数组），去斜杠。
+// 提取 /Filter 名（单名或数组），去斜杠。
 func filterNames(dict string) []string {
 	i := strings.Index(dict, "/Filter")
 	if i < 0 {
@@ -409,7 +412,7 @@ func filterNames(dict string) []string {
 	return nil
 }
 
-// dictValue 提取 /Key << ... >> 内联字典文本（含定界符）。
+// 提取 /Key << ... >> 内联字典文本（含定界符）。
 func dictValue(body, key string) string {
 	i := strings.Index(body, "/"+key)
 	if i < 0 {
@@ -436,7 +439,7 @@ func dictValue(body, key string) string {
 	return ""
 }
 
-// applyPredictor 应用 PNG（10–15）/ TIFF（2）预测器解码（colors=1, bpc=8）。
+// 应用 PNG（10–15）/ TIFF（2）预测器解码（colors=1, bpc=8）。
 func applyPredictor(data []byte, predictor, columns int) ([]byte, error) {
 	if predictor == 2 {
 		// TIFF：逐字节差分
@@ -493,6 +496,7 @@ func applyPredictor(data []byte, predictor, columns int) ([]byte, error) {
 	return out, nil
 }
 
+// 计算 PNG Paeth 预测器（a=左邻，b=上方，c=左上）。
 func paeth(a, b, c int) int {
 	p := a + b - c
 	pa, pb, pc := abs(p-a), abs(p-b), abs(p-c)
@@ -505,6 +509,7 @@ func paeth(a, b, c int) int {
 	return c
 }
 
+// 返回整数的绝对值。
 func abs(n int) int {
 	if n < 0 {
 		return -n
@@ -514,7 +519,7 @@ func abs(n int) int {
 
 // --- 对象解析 ---
 
-// body 按索引取对象本体文本（普通对象按偏移取字节，压缩对象从 ObjStm 解压）。
+// 按索引取对象本体文本（普通对象按偏移取字节，压缩对象从 ObjStm 解压）。
 func (d *docIndex) body(doc []byte, num int) (string, error) {
 	e, ok := d.entries[num]
 	if !ok || e.typ == 0 {
@@ -546,7 +551,7 @@ func (d *docIndex) body(doc []byte, num int) (string, error) {
 	return strings.TrimSpace(string(doc[start : end+i])), nil
 }
 
-// streamRegion 若对象从 start 起包含流，返回 true 与流数据结束位置。
+// 若对象从 start 起包含流，返回 true 与流数据结束位置。
 func streamRegion(doc []byte, d *docIndex, num, start int) (bool, int) {
 	p := skipWhite(doc, start)
 	dictEnd, err := dictEndAt(doc, p)
@@ -580,7 +585,7 @@ func streamRegion(doc []byte, d *docIndex, num, start int) (bool, int) {
 	return true, q + length
 }
 
-// objstmObject 从对象流 stmNum 中取出成员对象 num 的本体。
+// 从对象流 stmNum 中取出成员对象 num 的本体。
 func (d *docIndex) objstmObject(doc []byte, stmNum, num int) (string, error) {
 	objs, err := d.loadObjStm(doc, stmNum)
 	if err != nil {
@@ -593,7 +598,7 @@ func (d *docIndex) objstmObject(doc []byte, stmNum, num int) (string, error) {
 	return body, nil
 }
 
-// loadObjStm 解码对象流并解析成员对象（结果缓存）。
+// 解码对象流并解析成员对象（结果缓存）。
 func (d *docIndex) loadObjStm(doc []byte, stmNum int) (map[int]string, error) {
 	if objs, ok := d.objstmObjs[stmNum]; ok {
 		return objs, nil
@@ -650,7 +655,7 @@ func (d *docIndex) loadObjStm(doc []byte, stmNum int) (map[int]string, error) {
 
 // --- 字典/空白扫描小工具 ---
 
-// skipWhite 跳过 PDF 空白与注释。
+// 跳过 PDF 空白与注释。
 func skipWhite(doc []byte, p int) int {
 	for p < len(doc) {
 		c := doc[p]
@@ -669,7 +674,7 @@ func skipWhite(doc []byte, p int) int {
 	return p
 }
 
-// dictEndAt 返回从 p（应指向 "<<"）开始、括号配对的字典结束位置（">>\" 之后）。
+// 返回从 p（应指向 "<<"）开始、括号配对的字典结束位置（">>\" 之后）。
 func dictEndAt(doc []byte, p int) (int, error) {
 	if p+1 >= len(doc) || doc[p] != '<' || doc[p+1] != '<' {
 		return 0, fmt.Errorf("缺少字典起始 <<")
@@ -699,7 +704,7 @@ func dictEndAt(doc []byte, p int) (int, error) {
 	return 0, fmt.Errorf("字典未闭合（文件截断）")
 }
 
-// skipLiteralString 返回 ')'' 之后的位置（处理转义与嵌套括号）。
+// 返回 ')'' 之后的位置（处理转义与嵌套括号）。
 func skipLiteralString(doc []byte, p int) int {
 	depth := 0
 	for i := p; i < len(doc); i++ {
@@ -718,7 +723,7 @@ func skipLiteralString(doc []byte, p int) int {
 	return -1
 }
 
-// readTwoInts2 读取 "start count" 两个整数，返回第二个整数之后的偏移。
+// 读取 "start count" 两个整数，返回第二个整数之后的偏移。
 func readTwoInts2(doc []byte, p int) (a, b, next int, err error) {
 	re := regexp.MustCompile(`^(\d+)\s+(\d+)\s*`)
 	m := re.FindSubmatch(doc[p:])
@@ -730,7 +735,7 @@ func readTwoInts2(doc []byte, p int) (a, b, next int, err error) {
 	return a, b, p + len(m[0]), nil
 }
 
-// readDictText 读取 p 处（跳过空白后）的字典文本。
+// 读取 p 处（跳过空白后）的字典文本。
 func readDictText(doc []byte, p int) (string, error) {
 	p = skipWhite(doc, p)
 	end, err := dictEndAt(doc, p)
@@ -740,7 +745,7 @@ func readDictText(doc []byte, p int) (string, error) {
 	return string(doc[p:end]), nil
 }
 
-// fillTrailer 从字典文本提取 trailer 字段。
+// 从字典文本提取 trailer 字段。
 func fillTrailer(t *trailerInfo, dict string) {
 	t.size = intValue(dict, "Size")
 	t.root = refValueStr(dict, "Root")

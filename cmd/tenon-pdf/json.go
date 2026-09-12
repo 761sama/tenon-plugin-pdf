@@ -13,8 +13,10 @@ import (
 // fontFlag 收集重复的 -font 标志：id=路径[@ttc序号] 或 id=builtin:内置名。
 type fontFlag [][2]string
 
+// 实现 flag.Value：返回已收集字体项的字符串表示。
 func (f *fontFlag) String() string { return fmt.Sprint([][2]string(*f)) }
 
+// 实现 flag.Value：解析 v（id=路径[@ttc序号] 或 id=builtin:内置名）并追加一条字体注册项。
 func (f *fontFlag) Set(v string) error {
 	id, src, ok := strings.Cut(v, "=")
 	if !ok || id == "" || src == "" {

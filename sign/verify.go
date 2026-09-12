@@ -105,11 +105,13 @@ func VerifyAll(doc []byte) ([]*VerifyResult, error) {
 	return verifyAll(doc, nil)
 }
 
-// VerifyAllWithOptions 校验全部签名并追加证书信任链验证。
+// 校验全部签名并追加证书信任链验证。
 func VerifyAllWithOptions(doc []byte, opts *VerifyOptions) ([]*VerifyResult, error) {
 	return verifyAll(doc, opts)
 }
 
+// verifyAll 循环调用 verifyCore 校验文档中的全部签名；
+// opts 非 nil 时逐个追加证书信任链验证。
 func verifyAll(doc []byte, opts *VerifyOptions) ([]*VerifyResult, error) {
 	var out []*VerifyResult
 	from := 0
@@ -152,7 +154,7 @@ func VerifyWithOptions(doc []byte, opts *VerifyOptions) (*VerifyResult, error) {
 	return res, nil
 }
 
-// checkChain 执行证书信任链验证并填充结果字段。
+// 执行证书信任链验证并填充结果字段。
 func checkChain(res *VerifyResult, parsed *parsedCMS, opts *VerifyOptions) {
 	res.ChainChecked = true
 
@@ -288,7 +290,7 @@ func verifyCore(doc []byte, from int) (*VerifyResult, *parsedCMS, int, error) {
 	return res, parsed, next, nil
 }
 
-// extractPDFString 从 "/Key (value)" 或 "/Key <hex>" 提取字符串值。
+// 从 "/Key (value)" 或 "/Key <hex>" 提取字符串值。
 func extractPDFString(data []byte) string {
 	i := bytes.IndexAny(data, "(<")
 	if i < 0 {

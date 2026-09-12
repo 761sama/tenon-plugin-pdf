@@ -10,12 +10,12 @@ import "fmt"
 
 const ttcfTag = 0x74746366 // 'ttcf'
 
-// IsCollection 报告数据是否为 TrueType Collection（.ttc）。
+// 报告数据是否为 TrueType Collection（.ttc）。
 func IsCollection(data []byte) bool {
 	return len(data) >= 4 && u32(data, 0) == ttcfTag
 }
 
-// CollectionCount 返回 TTC 集合中包含的字体数量；非集合返回 0。
+// 返回 TTC 集合中包含的字体数量；非集合返回 0。
 func CollectionCount(data []byte) int {
 	if !IsCollection(data) || len(data) < 12 {
 		return 0

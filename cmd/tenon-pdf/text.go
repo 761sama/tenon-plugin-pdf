@@ -20,7 +20,7 @@ var textFonts = map[string]*font.Font{
 	"Helvetica": font.Helvetica, "Times-Roman": font.TimesRoman, "Courier": font.Courier,
 }
 
-// cmdText 将纯文本文件转换为 PDF（自动换行、自动分页）。
+// 将纯文本文件转换为 PDF（自动换行、自动分页）。
 func cmdText(args []string) error {
 	fs := flag.NewFlagSet("text", flag.ExitOnError)
 	out := fs.String("o", "out.pdf", "输出文件")

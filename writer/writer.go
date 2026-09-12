@@ -25,7 +25,7 @@ type Writer struct {
 	encryptRef object.Ref
 }
 
-// New 创建写入器（PDF 版本 1.7）。
+// 创建写入器（PDF 版本 1.7）。
 func New() *Writer { return &Writer{version: "1.7"} }
 
 // SetEncrypt 启用文档加密：ref 为 Encrypt 字典的间接引用（其自身不加密），
@@ -35,22 +35,22 @@ func (w *Writer) SetEncrypt(ref object.Ref, e Encryptor) {
 	w.encryptor = e
 }
 
-// Alloc 预留一个间接对象号，内容稍后通过 Set 填充。
+// 预留一个间接对象号，内容稍后通过 Set 填充。
 func (w *Writer) Alloc() object.Ref {
 	w.objs = append(w.objs, nil)
 	return object.Ref{Num: len(w.objs)}
 }
 
-// Add 登记一个间接对象，返回其引用。
+// 登记一个间接对象，返回其引用。
 func (w *Writer) Add(o object.Object) object.Ref {
 	w.objs = append(w.objs, o)
 	return object.Ref{Num: len(w.objs)}
 }
 
-// Set 填充或替换已登记的对象内容。
+// 填充或替换已登记的对象内容。
 func (w *Writer) Set(r object.Ref, o object.Object) { w.objs[r.Num-1] = o }
 
-// NumObjects 返回已登记的间接对象数量。
+// 返回已登记的间接对象数量。
 func (w *Writer) NumObjects() int { return len(w.objs) }
 
 // countingWriter 统计写入字节数。
@@ -59,6 +59,7 @@ type countingWriter struct {
 	n int64
 }
 
+// 实现 io.Writer：写入底层 writer 并累计字节数。
 func (c *countingWriter) Write(p []byte) (int, error) {
 	n, err := c.w.Write(p)
 	c.n += int64(n)

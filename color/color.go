@@ -18,8 +18,10 @@ type Color interface {
 	Space() string
 }
 
+// 将浮点数格式化为 PDF 数值字符串。
 func ftoa(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }
 
+// 将多个浮点分量以空格连接为操作数字符串。
 func join(vals ...float64) string {
 	s := ftoa(vals[0])
 	for _, v := range vals[1:] {
@@ -28,6 +30,7 @@ func join(vals ...float64) string {
 	return s
 }
 
+// 将分量值截断到 [0, 1] 区间。
 func clamp(v float64) float64 {
 	if v < 0 {
 		return 0
@@ -41,45 +44,72 @@ func clamp(v float64) float64 {
 // Gray 灰度颜色，0 为黑，1 为白。
 type Gray float64
 
-func (g Gray) Operands() string      { return ftoa(clamp(float64(g))) }
-func (g Gray) FillOp() string        { return "g" }
-func (g Gray) StrokeOp() string      { return "G" }
+// 返回灰度操作数。
+func (g Gray) Operands() string { return ftoa(clamp(float64(g))) }
+
+// 返回灰度填充操作符 g。
+func (g Gray) FillOp() string { return "g" }
+
+// 返回灰度描边操作符 G。
+func (g Gray) StrokeOp() string { return "G" }
+
+// 返回归一化灰度分量。
 func (g Gray) Components() []float64 { return []float64{clamp(float64(g))} }
-func (g Gray) Space() string         { return "DeviceGray" }
+
+// 返回色彩空间名 DeviceGray。
+func (g Gray) Space() string { return "DeviceGray" }
 
 // RGB 颜色，分量取值 0–1。
 type RGB struct{ R, G, B float64 }
 
-// RGBf 以 0–1 浮点分量构造 RGB。
+// 以 0–1 浮点分量构造 RGB。
 func RGBf(r, g, b float64) RGB { return RGB{clamp(r), clamp(g), clamp(b)} }
 
-// RGB255 以 0–255 分量构造 RGB。
+// 以 0–255 分量构造 RGB。
 func RGB255(r, g, b uint8) RGB {
 	return RGB{float64(r) / 255, float64(g) / 255, float64(b) / 255}
 }
 
-// Hex 以 0xRRGGBB 构造 RGB。
+// 以 0xRRGGBB 构造 RGB。
 func Hex(v uint32) RGB {
 	return RGB255(uint8(v>>16), uint8(v>>8), uint8(v))
 }
 
-func (c RGB) Operands() string      { return join(c.R, c.G, c.B) }
-func (c RGB) FillOp() string        { return "rg" }
-func (c RGB) StrokeOp() string      { return "RG" }
+// 返回 RGB 操作数。
+func (c RGB) Operands() string { return join(c.R, c.G, c.B) }
+
+// 返回 RGB 填充操作符 rg。
+func (c RGB) FillOp() string { return "rg" }
+
+// 返回 RGB 描边操作符 RG。
+func (c RGB) StrokeOp() string { return "RG" }
+
+// 返回归一化 RGB 分量。
 func (c RGB) Components() []float64 { return []float64{c.R, c.G, c.B} }
-func (c RGB) Space() string         { return "DeviceRGB" }
+
+// 返回色彩空间名 DeviceRGB。
+func (c RGB) Space() string { return "DeviceRGB" }
 
 // CMYK 颜色，分量取值 0–1。
 type CMYK struct{ C, M, Y, K float64 }
 
-// CMYKf 构造 CMYK 颜色。
+// 构造 CMYK 颜色。
 func CMYKf(c, m, y, k float64) CMYK { return CMYK{clamp(c), clamp(m), clamp(y), clamp(k)} }
 
-func (c CMYK) Operands() string      { return join(c.C, c.M, c.Y, c.K) }
-func (c CMYK) FillOp() string        { return "k" }
-func (c CMYK) StrokeOp() string      { return "K" }
+// 返回 CMYK 操作数。
+func (c CMYK) Operands() string { return join(c.C, c.M, c.Y, c.K) }
+
+// 返回 CMYK 填充操作符 k。
+func (c CMYK) FillOp() string { return "k" }
+
+// 返回 CMYK 描边操作符 K。
+func (c CMYK) StrokeOp() string { return "K" }
+
+// 返回归一化 CMYK 分量。
 func (c CMYK) Components() []float64 { return []float64{c.C, c.M, c.Y, c.K} }
-func (c CMYK) Space() string         { return "DeviceCMYK" }
+
+// 返回色彩空间名 DeviceCMYK。
+func (c CMYK) Space() string { return "DeviceCMYK" }
 
 // 常用颜色。
 var (

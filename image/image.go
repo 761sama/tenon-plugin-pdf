@@ -29,7 +29,7 @@ type Image struct {
 	SMask *Image
 }
 
-// Decode 从字节流识别并解码图像，支持 JPEG、PNG 与 GIF。
+// 从字节流识别并解码图像，支持 JPEG、PNG 与 GIF。
 func Decode(r interface{ Read([]byte) (int, error) }) (*Image, error) {
 	data, err := readAll(r)
 	if err != nil {
@@ -46,7 +46,7 @@ func Decode(r interface{ Read([]byte) (int, error) }) (*Image, error) {
 	return nil, fmt.Errorf("image: 无法识别的图像格式")
 }
 
-// Stream 生成图像 XObject 流；smask 为蒙版的间接引用，无蒙版传 nil。
+// 生成图像 XObject 流；smask 为蒙版的间接引用，无蒙版传 nil。
 func (im *Image) Stream(smask object.Object) *object.Stream {
 	st := object.NewStream(im.Data)
 	st.Dict.Set("Type", object.Name("XObject"))
@@ -71,13 +71,14 @@ func (im *Image) Stream(smask object.Object) *object.Stream {
 	return st
 }
 
+// 读取 r 中的全部字节。
 func readAll(r interface{ Read([]byte) (int, error) }) ([]byte, error) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)
 	return buf.Bytes(), err
 }
 
-// flate 以 zlib（FlateDecode）压缩数据。
+// 以 zlib（FlateDecode）压缩数据。
 func flate(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	zw := zlib.NewWriter(&buf)

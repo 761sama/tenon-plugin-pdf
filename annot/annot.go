@@ -29,6 +29,7 @@ type Base struct {
 	Contents string     // 弹出备注内容
 }
 
+// 向批注字典写入公共条目（/Type、/Rect、/Contents）。
 func (b Base) fill(d *object.Dict) {
 	d.Set("Type", object.Name("Annot"))
 	d.Set("Rect", object.Rect(b.Rect[0], b.Rect[1], b.Rect[2], b.Rect[3]))
@@ -43,6 +44,7 @@ type Border struct {
 	Dash  []float64 // 虚线模式，nil 为实线
 }
 
+// 向批注字典写入边框条目（/Border，虚线时附加 /BS）。
 func (bd Border) apply(d *object.Dict) {
 	w := bd.Width
 	if w == 0 {
@@ -66,6 +68,7 @@ type LinkURI struct {
 	Color  *color.RGB // 边框颜色，可为空
 }
 
+// 实现 Annotation 接口：生成 URI 链接批注字典。
 func (l LinkURI) Dict(res Resolver) *object.Dict {
 	d := object.NewDict()
 	l.Base.fill(d)
@@ -90,6 +93,7 @@ type LinkGoTo struct {
 	Border Border
 }
 
+// 实现 Annotation 接口：生成页内跳转链接批注字典，res 用于解析跳转目标。
 func (l LinkGoTo) Dict(res Resolver) *object.Dict {
 	d := object.NewDict()
 	l.Base.fill(d)
@@ -110,6 +114,7 @@ type Note struct {
 	Icon  string // Comment / Key / Note / Help / NewParagraph / Paragraph / Insert
 }
 
+// 实现 Annotation 接口：生成文本注释（便签）字典。
 func (n Note) Dict(res Resolver) *object.Dict {
 	d := object.NewDict()
 	n.Base.fill(d)
@@ -150,6 +155,7 @@ var markupColor = map[MarkupKind]color.RGB{
 	Highlight: {R: 1, G: 1}, Underline: {G: 0.5}, StrikeOut: {R: 1}, Squiggly: {R: 1, B: 1},
 }
 
+// 实现 Annotation 接口：生成标记类批注字典（含颜色与 QuadPoints）。
 func (m Markup) Dict(res Resolver) *object.Dict {
 	d := object.NewDict()
 	m.Base.fill(d)
@@ -177,9 +183,10 @@ func (m Markup) Dict(res Resolver) *object.Dict {
 // Raw 原始批注：直接包装一个字典（转义出口）。
 type Raw struct{ D *object.Dict }
 
+// 实现 Annotation 接口：直接返回包装的字典。
 func (r Raw) Dict(res Resolver) *object.Dict { return r.D }
 
-// TopOrNaN 供序列化使用：NaN 表示页顶。
+// 供序列化使用：NaN 表示页顶。
 func TopOrNaN(top float64, pageHeight float64) float64 {
 	if math.IsNaN(top) {
 		return pageHeight

@@ -27,12 +27,12 @@ type FontRegistry struct {
 	fonts map[string]font.Resource
 }
 
-// NewFontRegistry 创建空的字体注册表。
+// 创建空的字体注册表。
 func NewFontRegistry() *FontRegistry {
 	return &FontRegistry{fonts: map[string]font.Resource{}}
 }
 
-// Register 注册已加载的字体资源。
+// 注册已加载的字体资源。
 func (r *FontRegistry) Register(id string, f font.Resource) error {
 	if id == "" || f == nil {
 		return fmt.Errorf("jsongen: 注册字体需要非空 id 与字体实例")
@@ -41,7 +41,7 @@ func (r *FontRegistry) Register(id string, f font.Resource) error {
 	return nil
 }
 
-// RegisterFile 注册 TTF 字体文件；.ttc 集合取成员 0（需指定成员请用 RegisterCollection）。
+// 注册 TTF 字体文件；.ttc 集合取成员 0（需指定成员请用 RegisterCollection）。
 func (r *FontRegistry) RegisterFile(id, path string) error {
 	if strings.EqualFold(filepath.Ext(path), ".ttc") {
 		return r.RegisterCollection(id, path, 0)
@@ -53,7 +53,7 @@ func (r *FontRegistry) RegisterFile(id, path string) error {
 	return r.Register(id, f)
 }
 
-// RegisterCollection 注册 TTC 集合的成员字体。
+// 注册 TTC 集合的成员字体。
 func (r *FontRegistry) RegisterCollection(id, path string, index int) error {
 	f, err := font.LoadCJKCollectionFile(path, index)
 	if err != nil {
@@ -80,7 +80,7 @@ var builtinFonts = map[string]font.Resource{
 	"ZapfDingbats":          font.ZapfDingbats,
 }
 
-// RegisterBuiltin 注册标准 14 字体（如 "Helvetica"、"Times-Bold"）。
+// 注册标准 14 字体（如 "Helvetica"、"Times-Bold"）。
 func (r *FontRegistry) RegisterBuiltin(id, name string) error {
 	f, ok := builtinFonts[name]
 	if !ok {
@@ -89,6 +89,7 @@ func (r *FontRegistry) RegisterBuiltin(id, name string) error {
 	return r.Register(id, f)
 }
 
+// 按 id 查找已注册字体，未注册（或注册表为 nil）时返回错误。
 func (r *FontRegistry) lookup(id string) (font.Resource, error) {
 	if r == nil {
 		return nil, fmt.Errorf("jsongen: 字体注册表为 nil")
@@ -192,7 +193,7 @@ type cellSpec struct {
 	Style      string `json:"style"`
 }
 
-// UnmarshalJSON 支持字符串简写（等价于 {"text": s}）。
+// 支持字符串简写（等价于 {"text": s}）。
 func (c *cellSpec) UnmarshalJSON(data []byte) error {
 	if len(data) > 0 && data[0] == '"' {
 		return json.Unmarshal(data, &c.Text)
@@ -226,7 +227,7 @@ type blockSpec struct {
 // ---------------------------------------------------------------------------
 // 构建入口
 
-// Build 按 JSON 描述构建 PDF 文档。fonts 为代码层注册的字体表（必填）。
+// 按 JSON 描述构建 PDF 文档。fonts 为代码层注册的字体表（必填）。
 func Build(data []byte, fonts *FontRegistry) (*pdf.Document, error) {
 	var spec documentSpec
 	if err := json.Unmarshal(data, &spec); err != nil {
@@ -298,6 +299,7 @@ var pageSizes = map[string]page.Size{
 	"B5": page.B5, "Letter": page.Letter, "Legal": page.Legal,
 }
 
+// 解析页面尺寸：支持标准名（"A4" 等）或 {"width","height"} 自定义；缺省 A4。
 func parsePageSize(raw json.RawMessage) (page.Size, error) {
 	if len(raw) == 0 {
 		return page.A4, nil
@@ -319,7 +321,7 @@ func parsePageSize(raw json.RawMessage) (page.Size, error) {
 	return page.Size{W: custom.Width, H: custom.Height}, nil
 }
 
-// parseColor 解析 "#RRGGBB"；空串返回 nil（表示“未设置”）。
+// 解析 "#RRGGBB"；空串返回 nil（表示“未设置”）。
 func parseColor(s string) (color.Color, error) {
 	if s == "" {
 		return nil, nil
@@ -334,6 +336,7 @@ func parseColor(s string) (color.Color, error) {
 	return color.Hex(uint32(v)), nil
 }
 
+// 解析对齐方式（left/center/right/justify）；空串返回 def。
 func parseAlign(s string, def text.Alignment) (text.Alignment, error) {
 	switch s {
 	case "":

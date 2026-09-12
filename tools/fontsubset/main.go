@@ -16,6 +16,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/ttf"
 )
 
+// 读取完整字体与字符集文件（ASCII 可打印字符自动包含），输出子集字体。
 func main() {
 	if len(os.Args) != 4 {
 		fmt.Fprintln(os.Stderr, "用法: fontsubset <完整字体.ttf> <字符集.txt> <输出.ttf>")

@@ -20,7 +20,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
-// cmdDemo 生成功能演示 PDF。
+// 生成功能演示 PDF。
 func cmdDemo(args []string) error {
 	fs := flag.NewFlagSet("demo", flag.ExitOnError)
 	out := fs.String("o", "demo.pdf", "输出文件")
@@ -50,6 +50,7 @@ func cmdDemo(args []string) error {
 	return doc.SaveFile(*out)
 }
 
+// 演示页 1：标准 14 字体、段落排版与文本样式。
 func demoTextPage(doc *pdf.Document) {
 	p := doc.AddPage(page.A4)
 	p.SetFillColor(color.Hex(0x1a3a6b))
@@ -113,6 +114,7 @@ func demoTextPage(doc *pdf.Document) {
 		TextPosition(438, y-100).ShowText([]byte("2")).EndText()
 }
 
+// 演示页 2：图形、渐变、透明度与画布变换。
 func demoGraphicsPage(doc *pdf.Document) {
 	p := doc.AddPage(page.A4)
 	p.SetFillColor(color.Black)
@@ -184,6 +186,7 @@ func demoGraphicsPage(doc *pdf.Document) {
 	p.StrokeCircle(120, 230, 45)
 }
 
+// 演示页 3：图像嵌入（PNG alpha / JPEG）与批注。
 func demoImagePage(doc *pdf.Document) {
 	p := doc.AddPage(page.A4)
 	p.SetFillColor(color.Black)
@@ -247,6 +250,7 @@ func demoImagePage(doc *pdf.Document) {
 	})
 }
 
+// 演示页 4：AcroForm 交互表单（文本域、复选框）。
 func demoFormPage(doc *pdf.Document) {
 	p := doc.AddPage(page.A4)
 	p.SetFillColor(color.Black)

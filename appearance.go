@@ -16,7 +16,7 @@ import (
 // 文本使用 Helvetica（WinAnsi），非 WinAnsi 可表示的字符替换为 '?'——
 // 需要中文外观时请将 SignerName/Reason 等用拉丁字符表达，或后续扩展自定义字体。
 
-// buildSigAppearance 为可见签名字段生成外观流，返回其间接引用。
+// 为可见签名字段生成外观流，返回其间接引用。
 func buildSigAppearance(w *writer.Writer, s *sign.Field, rect [4]float64) object.Ref {
 	width := rect[2] - rect[0]
 	height := rect[3] - rect[1]
@@ -74,7 +74,7 @@ func buildSigAppearance(w *writer.Writer, s *sign.Field, rect [4]float64) object
 	return w.Add(st)
 }
 
-// winansiSafe 将字符串限制在 WinAnsi 可绘制的 ASCII 子集。
+// 将字符串限制在 WinAnsi 可绘制的 ASCII 子集。
 func winansiSafe(s string) string {
 	b := []byte(s)
 	out := b[:0]
@@ -88,7 +88,7 @@ func winansiSafe(s string) string {
 	return string(out)
 }
 
-// pdfEscapeASCII 转义字面量字符串中的定界符。
+// 转义字面量字符串中的定界符。
 func pdfEscapeASCII(s string) string {
 	var b bytes.Buffer
 	for i := 0; i < len(s); i++ {

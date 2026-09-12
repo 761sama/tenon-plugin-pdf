@@ -42,7 +42,7 @@ var (
 	ZapfDingbats         = &Font{BaseFont: "ZapfDingbats"}
 )
 
-// Standard14 返回全部标准 14 字体。
+// 返回全部标准 14 字体。
 func Standard14() []*Font {
 	return []*Font{
 		Helvetica, HelveticaBold, HelveticaOblique, HelveticaBoldOblique,
@@ -74,7 +74,7 @@ func (f *Font) Encode(s string) []byte {
 	return out
 }
 
-// WidthOf 返回文本在 1/1000 em 单位下的总宽度。
+// 返回文本在 1/1000 em 单位下的总宽度。
 func (f *Font) WidthOf(s string) int {
 	if !f.winansi {
 		// 内置编码字体：无宽度表时按近似等宽估算
@@ -87,26 +87,26 @@ func (f *Font) WidthOf(s string) int {
 	return w
 }
 
-// TextWidth 返回文本在给定字号下的宽度（PDF 用户空间单位，磅）。
+// 返回文本在给定字号下的宽度（PDF 用户空间单位，磅）。
 func (f *Font) TextWidth(s string, size float64) float64 {
 	return float64(f.WidthOf(s)) * size / 1000
 }
 
-// Ascent 返回指定字号下的上升部高度。
+// 返回指定字号下的上升部高度。
 func (f *Font) Ascent(size float64) float64 { return float64(f.metrics.Ascent) * size / 1000 }
 
-// Descent 返回指定字号下的下降部高度（负值）。
+// 返回指定字号下的下降部高度（负值）。
 func (f *Font) Descent(size float64) float64 { return float64(f.metrics.Descent) * size / 1000 }
 
-// CapHeight 返回指定字号下的大写字母高度。
+// 返回指定字号下的大写字母高度。
 func (f *Font) CapHeight(size float64) float64 { return float64(f.metrics.CapHeight) * size / 1000 }
 
-// LineHeight 返回指定字号下的建议行高。
+// 返回指定字号下的建议行高。
 func (f *Font) LineHeight(size float64) float64 {
 	return float64(f.metrics.Ascent-f.metrics.Descent+f.metrics.LineGap) * size / 1000
 }
 
-// Dict 生成字体资源字典（Type1，不嵌入字体文件）。
+// 生成字体资源字典（Type1，不嵌入字体文件）。
 func (f *Font) Dict() *object.Dict {
 	d := object.NewDict()
 	d.Set("Type", object.Name("Font"))

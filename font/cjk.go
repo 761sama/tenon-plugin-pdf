@@ -58,7 +58,7 @@ func LoadCJK(r io.Reader) (*CJKFont, error) {
 	return newCJK(tf), nil
 }
 
-// LoadCJKFile 从文件加载 CJK 字体。
+// 从文件加载 CJK 字体。
 func LoadCJKFile(path string) (*CJKFont, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -68,7 +68,7 @@ func LoadCJKFile(path string) (*CJKFont, error) {
 	return LoadCJK(f)
 }
 
-// LoadCJKCollection 从 TTC 集合加载第 index 个成员字体（0 起），如 simsun.ttc。
+// 从 TTC 集合加载第 index 个成员字体（0 起），如 simsun.ttc。
 func LoadCJKCollection(r io.Reader, index int) (*CJKFont, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -81,7 +81,7 @@ func LoadCJKCollection(r io.Reader, index int) (*CJKFont, error) {
 	return newCJK(tf), nil
 }
 
-// LoadCJKCollectionFile 从 TTC 集合文件加载第 index 个成员字体。
+// 从 TTC 集合文件加载第 index 个成员字体。
 func LoadCJKCollectionFile(path string, index int) (*CJKFont, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -91,6 +91,7 @@ func LoadCJKCollectionFile(path string, index int) (*CJKFont, error) {
 	return LoadCJKCollection(f, index)
 }
 
+// 基于已解析的 ttf.Font 创建 CJKFont（默认开启连字与字距）。
 func newCJK(tf *ttf.Font) *CJKFont {
 	return &CJKFont{
 		tf:        tf,
@@ -102,10 +103,10 @@ func newCJK(tf *ttf.Font) *CJKFont {
 	}
 }
 
-// Name 返回字体的 PostScript 名称。
+// 返回字体的 PostScript 名称。
 func (f *CJKFont) Name() string { return f.name }
 
-// SetName 覆盖字体的 PostScript 名称（用于 /BaseFont 等）。
+// 覆盖字体的 PostScript 名称（用于 /BaseFont 等）。
 func (f *CJKFont) SetName(name string) { f.name = sanitizePSName(name) }
 
 // token 排版后的一个输出单元：一个字形及其对应的 Unicode 文本。
@@ -167,7 +168,7 @@ func (f *CJKFont) tokenize(s string) []token {
 	return out
 }
 
-// cidOfToken 返回 token 的 CID；首次出现时分配。无字形返回 0（.notdef）。
+// 返回 token 的 CID；首次出现时分配。无字形返回 0（.notdef）。
 func (f *CJKFont) cidOfToken(t token) uint16 {
 	if t.gid == 0 {
 		return 0
@@ -183,7 +184,7 @@ func (f *CJKFont) cidOfToken(t token) uint16 {
 	return cid
 }
 
-// kernPair 返回相邻两 token 的字距修正（1/1000 em，通常 ≤ 0）。
+// 返回相邻两 token 的字距修正（1/1000 em，通常 ≤ 0）。
 func (f *CJKFont) kernPair(a, b token) int {
 	if !f.Kerning || a.gid == 0 || b.gid == 0 {
 		return 0
@@ -191,7 +192,7 @@ func (f *CJKFont) kernPair(a, b token) int {
 	return f.tf.Kern(a.gid, b.gid) * 1000 / f.tf.UnitsPerEm
 }
 
-// Encode 将文本编码为 2 字节大端 CID 序列（连字已替换为单字形）。
+// 将文本编码为 2 字节大端 CID 序列（连字已替换为单字形）。
 func (f *CJKFont) Encode(s string) []byte {
 	toks := f.tokenize(s)
 	out := make([]byte, 0, len(toks)*2)
@@ -242,7 +243,7 @@ func (f *CJKFont) EncodeKerned(s string) []any {
 	return segs
 }
 
-// WidthOf 返回文本在 1/1000 em 单位下的总宽度（含连字替换与字距调整）。
+// 返回文本在 1/1000 em 单位下的总宽度（含连字替换与字距调整）。
 func (f *CJKFont) WidthOf(s string) int {
 	toks := f.tokenize(s)
 	w := 0
@@ -257,22 +258,23 @@ func (f *CJKFont) WidthOf(s string) int {
 	return w
 }
 
-// TextWidth 返回文本在给定字号下的宽度（磅）。
+// 返回文本在给定字号下的宽度（磅）。
 func (f *CJKFont) TextWidth(s string, size float64) float64 {
 	return float64(f.WidthOf(s)) * size / 1000
 }
 
+// 将字体单位的度量值 v 换算为字号 size 下的磅值。
 func (f *CJKFont) scale(v int, size float64) float64 {
 	return float64(v) * size / float64(f.tf.UnitsPerEm)
 }
 
-// Ascent 返回指定字号下的上升部高度。
+// 返回指定字号下的上升部高度。
 func (f *CJKFont) Ascent(size float64) float64 { return f.scale(f.tf.Ascent, size) }
 
-// Descent 返回指定字号下的下降部高度（负值）。
+// 返回指定字号下的下降部高度（负值）。
 func (f *CJKFont) Descent(size float64) float64 { return f.scale(f.tf.Descent, size) }
 
-// CapHeight 返回指定字号下的大写字母高度（OS/2 sCapHeight；无数据时取上升部的 70% 估算）。
+// 返回指定字号下的大写字母高度（OS/2 sCapHeight；无数据时取上升部的 70% 估算）。
 func (f *CJKFont) CapHeight(size float64) float64 {
 	if f.tf.CapHeight > 0 {
 		return f.scale(f.tf.CapHeight, size)
@@ -280,7 +282,7 @@ func (f *CJKFont) CapHeight(size float64) float64 {
 	return f.scale(f.tf.Ascent, size) * 0.7
 }
 
-// LineHeight 返回指定字号下的建议行高。
+// 返回指定字号下的建议行高。
 func (f *CJKFont) LineHeight(size float64) float64 {
 	return f.scale(f.tf.Ascent-f.tf.Descent+f.tf.LineGap, size)
 }
@@ -424,7 +426,7 @@ endcodespacerange
 	return object.NewStream([]byte(sb.String()))
 }
 
-// sanitizePSName 清洗 PostScript 名称中的非法字符。
+// 清洗 PostScript 名称中的非法字符。
 func sanitizePSName(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -438,7 +440,7 @@ func sanitizePSName(s string) string {
 	return b.String()
 }
 
-// subsetTag 依据已用字符集生成确定性的 6 大写字梅子集前缀。
+// 依据已用字符集生成确定性的 6 大写字梅子集前缀。
 func subsetTag(unis []string) string {
 	h := uint32(5381)
 	for _, u := range unis {

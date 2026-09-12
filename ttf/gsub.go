@@ -77,7 +77,7 @@ func (f *Font) parseGSUB() {
 	}
 }
 
-// parseLigatureLookup 解析单个 lookup（lookups 为 LookupList 起始切片，lo 为表内偏移）。
+// 解析单个 lookup（lookups 为 LookupList 起始切片，lo 为表内偏移）。
 func (f *Font) parseLigatureLookup(lookups []byte, lo int) {
 	if lo+6 > len(lookups) || u16(lookups, lo) != 4 { // 仅 LigatureSubst
 		return
@@ -92,7 +92,7 @@ func (f *Font) parseLigatureLookup(lookups []byte, lo int) {
 	}
 }
 
-// parseLigatureSubtable 解析 LigatureSubst format 1 子表。
+// 解析 LigatureSubst format 1 子表。
 func (f *Font) parseLigatureSubtable(lookups []byte, sub int) {
 	if sub+6 > len(lookups) || u16(lookups, sub) != 1 {
 		return
@@ -109,7 +109,7 @@ func (f *Font) parseLigatureSubtable(lookups []byte, sub int) {
 	}
 }
 
-// parseLigatureSet 解析以 first 字形开头的连字集合。
+// 解析以 first 字形开头的连字集合。
 func (f *Font) parseLigatureSet(lookups []byte, set int, first uint16) {
 	if set+2 > len(lookups) {
 		return
@@ -139,7 +139,7 @@ func (f *Font) parseLigatureSet(lookups []byte, set int, first uint16) {
 	}
 }
 
-// coverageGlyphs 展开 coverage 表（format 1 列表 / format 2 区间）为字形 ID 切片。
+// 展开 coverage 表（format 1 列表 / format 2 区间）为字形 ID 切片。
 func coverageGlyphs(d []byte, off int) []uint16 {
 	if off+4 > len(d) {
 		return nil
@@ -174,5 +174,5 @@ func coverageGlyphs(d []byte, off int) []uint16 {
 // 无连字规则时返回 nil。
 func (f *Font) Ligatures() map[uint16][]Ligature { return f.ligatures }
 
-// HasLigatures 报告字体是否带可用的连字规则。
+// 报告字体是否带可用的连字规则。
 func (f *Font) HasLigatures() bool { return len(f.ligatures) > 0 }

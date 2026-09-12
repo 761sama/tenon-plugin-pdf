@@ -72,12 +72,12 @@ type Document struct {
 	dss        *DSSData      // LTV：DSS 验证材料（证书链 + CRL/OCSP）
 }
 
-// New 创建空文档（默认压缩内容流）。
+// 创建空文档（默认压缩内容流）。
 func New() *Document {
 	return &Document{compress: true}
 }
 
-// SetCompress 设置是否压缩内容流（默认开启）。
+// 设置是否压缩内容流（默认开启）。
 func (d *Document) SetCompress(on bool) { d.compress = on }
 
 // SetEncryption 启用标准安全处理器加密（用户/所有者密码 + 权限位 + AES-128/AES-256）。
@@ -120,32 +120,32 @@ func (d *Document) SetDSS(dss DSSData) { d.dss = &dss }
 // 同一修订内的多个占位符无法顺序签署（后签名会改变前签名覆盖区内的字节）。
 func (d *Document) AddSignature(f *sign.Field) { d.signature = append(d.signature, f) }
 
-// Info 返回文档信息（直接修改字段即可）。
+// 返回文档信息（直接修改字段即可）。
 func (d *Document) Info() *metadata.Info { return &d.info }
 
-// Outline 返回书签大纲。
+// 返回书签大纲。
 func (d *Document) Outline() *outline.Outline { return &d.outline }
 
-// SetPageLayout 设置页面布局。
+// 设置页面布局。
 func (d *Document) SetPageLayout(l PageLayout) { d.layout = l }
 
-// SetPageMode 设置页面模式。
+// 设置页面模式。
 func (d *Document) SetPageMode(m PageMode) { d.mode = m }
 
-// AddPage 添加页面并返回画布。
+// 添加页面并返回画布。
 func (d *Document) AddPage(s page.Size) *page.Page {
 	p := page.New(s)
 	d.pages = append(d.pages, p)
 	return p
 }
 
-// PageCount 返回页数。
+// 返回页数。
 func (d *Document) PageCount() int { return len(d.pages) }
 
-// AddField 添加交互表单字段。
+// 添加交互表单字段。
 func (d *Document) AddField(f form.Field) { d.fields = append(d.fields, f) }
 
-// SaveFile 将文档写入文件。
+// 将文档写入文件。
 func (d *Document) SaveFile(path string) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -156,7 +156,7 @@ func (d *Document) SaveFile(path string) error {
 	return err
 }
 
-// Bytes 将文档序列化为字节切片。
+// 将文档序列化为字节切片。
 func (d *Document) Bytes() ([]byte, error) {
 	var buf bytes.Buffer
 	if _, err := d.WriteTo(&buf); err != nil {
@@ -165,7 +165,7 @@ func (d *Document) Bytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// WriteTo 将文档序列化写入 out。
+// 将文档序列化写入 out。
 func (d *Document) WriteTo(out io.Writer) (int64, error) {
 	if len(d.pages) == 0 {
 		return 0, fmt.Errorf("pdf: 文档至少需要一个页面")
@@ -410,7 +410,7 @@ func (d *Document) WriteTo(out io.Writer) (int64, error) {
 	return w.WriteTo(out, catalogRef, infoRef, fileID)
 }
 
-// buildPage 序列化单个页面对象。
+// 序列化单个页面对象。
 func (d *Document) buildPage(w *writer.Writer, p *page.Page, pagesRef object.Ref,
 	registerImage func(*image.Image) object.Ref, resolver annot.Resolver,
 	buildFont func(font.Resource) object.Ref) *object.Dict {

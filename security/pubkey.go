@@ -181,7 +181,7 @@ func buildEnvelope(content []byte, cert *x509.Certificate) ([]byte, error) {
 	), nil
 }
 
-// aesCryptWithIV AES-128-CBC 加密（显式 IV + PKCS#7 填充），输出仅密文。
+// AES-128-CBC 加密（显式 IV + PKCS#7 填充），输出仅密文。
 func aesCryptWithIV(key, iv, data []byte) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -199,6 +199,7 @@ func aesCryptWithIV(key, iv, data []byte) []byte {
 
 // --- 极简 DER 编码（security 包不依赖 sign，保持依赖方向 security→object） ---
 
+// 编码 DER TLV：tag + 长度域（短形/长形）+ 内容。
 func pkT(tag byte, content []byte) []byte {
 	out := []byte{tag}
 	n := len(content)
@@ -215,6 +216,7 @@ func pkT(tag byte, content []byte) []byte {
 	return append(out, content...)
 }
 
+// 编码 SEQUENCE（内容按序拼接）。
 func pkSeq(parts ...[]byte) []byte {
 	var c []byte
 	for _, p := range parts {
@@ -225,8 +227,10 @@ func pkSeq(parts ...[]byte) []byte {
 
 var pkNull = []byte{0x05, 0x00}
 
+// 编码 INTEGER。
 func pkInt(v int64) []byte { return pkT(0x02, pkIntBytes(big.NewInt(v))) }
 
+// 编码大整数为 DER INTEGER 内容字节（正数高位为 1 时补前导零）。
 func pkIntBytes(v *big.Int) []byte {
 	b := v.Bytes()
 	if len(b) == 0 {
@@ -238,6 +242,7 @@ func pkIntBytes(v *big.Int) []byte {
 	return b
 }
 
+// 编码对象标识符（OID）。
 func pkOID(oids []int) []byte {
 	body := []byte{byte(oids[0]*40 + oids[1])}
 	for _, v := range oids[2:] {

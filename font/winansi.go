@@ -47,7 +47,7 @@ func encodeWinAnsi(r rune) byte {
 	return '?'
 }
 
-// DecodeWinAnsi 将 WinAnsiEncoding 字节序列解码为 UTF-8 字符串（用于测试与调试）。
+// 将 WinAnsiEncoding 字节序列解码为 UTF-8 字符串（用于测试与调试）。
 func DecodeWinAnsi(data []byte) string {
 	rev := make(map[byte]rune, len(winansiExtra))
 	for r, b := range winansiExtra {

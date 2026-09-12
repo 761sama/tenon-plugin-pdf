@@ -255,7 +255,7 @@ func SignExisting(doc []byte, field *Field, opts Options) ([]byte, error) {
 	return Sign(withField, opts)
 }
 
-// findPage 沿页树（支持嵌套 Pages 节点）找到第 pageIdx 个叶子页面对象号。
+// 沿页树（支持嵌套 Pages 节点）找到第 pageIdx 个叶子页面对象号。
 func (d *docIndex) findPage(doc []byte, root, pageIdx int) (int, error) {
 	found := 0
 	pageNum := 0
@@ -299,7 +299,7 @@ func (d *docIndex) findPage(doc []byte, root, pageIdx int) (int, error) {
 	return pageNum, nil
 }
 
-// insertDictKey 在扁平最外层字典末尾 ">>" 前插入一个键值对文本。
+// 在扁平最外层字典末尾 ">>" 前插入一个键值对文本。
 func insertDictKey(body, kv string) string {
 	trimmed := strings.TrimRight(body, " \t\r\n")
 	i := strings.LastIndex(trimmed, ">>")
@@ -309,7 +309,7 @@ func insertDictKey(body, kv string) string {
 	return trimmed[:i] + " " + kv + " " + trimmed[i:]
 }
 
-// upsertArrayRef 向对象本体的 /Key [ ... ] 数组末尾插入引用；无该键则新建数组。
+// 向对象本体的 /Key [ ... ] 数组末尾插入引用；无该键则新建数组。
 func upsertArrayRef(body, key string, num int) string {
 	if strings.Contains(body, "/"+key) {
 		return insertArrayRef(body, key, num)
@@ -368,7 +368,7 @@ type trailerInfo struct {
 	id      string // 完整 /ID 数组文本（含方括号）
 }
 
-// lastStartxref 定位最后一个 startxref 偏移。
+// 定位最后一个 startxref 偏移。
 func lastStartxref(doc []byte) (int, error) {
 	i := bytes.LastIndex(doc, []byte("startxref"))
 	if i < 0 {
@@ -381,9 +381,10 @@ func lastStartxref(doc []byte) (int, error) {
 	return strconv.Atoi(string(m[1]))
 }
 
-// refValue 从对象本体提取 /Key N 0 R 的对象号。
+// 从对象本体提取 /Key N 0 R 的对象号。
 func refValue(body, key string) int { return refValueStr(body, key) }
 
+// 提取 /Key N G R 引用中的对象号（无该键返回 0）。
 func refValueStr(body, key string) int {
 	re := regexp.MustCompile(`/` + key + `\s+(\d+)\s+\d+\s+R`)
 	m := re.FindStringSubmatch(body)
@@ -394,7 +395,7 @@ func refValueStr(body, key string) int {
 	return n
 }
 
-// intValue 提取 /Key N 整数。
+// 提取 /Key N 整数。
 func intValue(body, key string) int {
 	re := regexp.MustCompile(`/` + key + `\s+(\d+)`)
 	m := re.FindStringSubmatch(body)
@@ -405,7 +406,7 @@ func intValue(body, key string) int {
 	return n
 }
 
-// arrayBody 提取 /Key [ ... ] 的方括号内容。
+// 提取 /Key [ ... ] 的方括号内容。
 func arrayBody(body, key string) string {
 	i := strings.Index(body, "/"+key)
 	if i < 0 {
@@ -419,7 +420,7 @@ func arrayBody(body, key string) string {
 	return body[i+lb+1 : i+rb]
 }
 
-// arrayText 提取 /Key [...] 的完整数组文本（含方括号）。
+// 提取 /Key [...] 的完整数组文本（含方括号）。
 func arrayText(body, key string) string {
 	i := strings.Index(body, "/"+key)
 	if i < 0 {
@@ -433,7 +434,7 @@ func arrayText(body, key string) string {
 	return body[i+lb : i+rb+1]
 }
 
-// arrayRefs 解析数组文本中的全部 N 0 R 引用。
+// 解析数组文本中的全部 N 0 R 引用。
 func arrayRefs(arr string) []int {
 	re := regexp.MustCompile(`(\d+)\s+\d+\s+R`)
 	var out []int
@@ -444,7 +445,7 @@ func arrayRefs(arr string) []int {
 	return out
 }
 
-// insertArrayRef 在对象本体的 /Key [ ... ] 数组末尾插入新的引用。
+// 在对象本体的 /Key [ ... ] 数组末尾插入新的引用。
 func insertArrayRef(body, key string, num int) string {
 	i := strings.Index(body, "/"+key)
 	if i < 0 {
@@ -458,7 +459,7 @@ func insertArrayRef(body, key string, num int) string {
 	return body[:pos] + fmt.Sprintf(" %d 0 R", num) + body[pos:]
 }
 
-// upsertAnnotsRef 向页面对象的 /Annots 数组追加引用（无则插入新键）。
+// 向页面对象的 /Annots 数组追加引用（无则插入新键）。
 func upsertAnnotsRef(pageBody string, num int) string {
 	if strings.Contains(pageBody, "/Annots") {
 		return insertArrayRef(pageBody, "Annots", num)
@@ -471,7 +472,7 @@ func upsertAnnotsRef(pageBody string, num int) string {
 	return trimmed[:len(trimmed)-2] + fmt.Sprintf(" /Annots [%d 0 R] >>", num)
 }
 
-// pdfTextStr 生成 PDF 文本字符串（纯 ASCII 字面量，否则 UTF-16BE 十六进制）。
+// 生成 PDF 文本字符串（纯 ASCII 字面量，否则 UTF-16BE 十六进制）。
 func pdfTextStr(s string) string {
 	ascii := true
 	for _, r := range s {
@@ -538,7 +539,7 @@ func appearanceContent(f *Field) string {
 	return c.String()
 }
 
-// asciiSafe 将字符串限制在 Helvetica 可绘制的 ASCII 子集。
+// 将字符串限制在 Helvetica 可绘制的 ASCII 子集。
 func asciiSafe(s string) string {
 	b := []byte(s)
 	out := b[:0]
@@ -552,7 +553,7 @@ func asciiSafe(s string) string {
 	return string(out)
 }
 
-// escapeASCII 转义字面量字符串中的定界符。
+// 转义字面量字符串中的定界符。
 func escapeASCII(s string) string {
 	var b bytes.Buffer
 	for i := 0; i < len(s); i++ {
@@ -565,6 +566,7 @@ func escapeASCII(s string) string {
 	return b.String()
 }
 
+// 对整数切片原地升序排序（插入排序）。
 func sortInts(a []int) {
 	for i := 1; i < len(a); i++ {
 		for j := i; j > 0 && a[j] < a[j-1]; j-- {

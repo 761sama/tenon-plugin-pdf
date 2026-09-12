@@ -13,7 +13,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/font"
 )
 
-// autoColWidths 按内容自适应测算列宽。
+// 按内容自适应测算列宽。
 func (t *Table) autoColWidths(total float64, grid [][]placedCell) []float64 {
 	n := len(t.Columns)
 	pref := make([]float64, n)

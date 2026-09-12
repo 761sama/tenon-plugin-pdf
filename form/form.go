@@ -44,9 +44,10 @@ type TextField struct {
 	ToolTip   string
 }
 
-// Page 返回字段所在页面。
+// 返回字段所在页面。
 func (f *TextField) Page() *page.Page { return f.PageRef }
 
+// 生成文本域（兼部件批注）字典。
 func (f *TextField) build(fonts FormFonts, pageRef object.Ref) *object.Dict {
 	d := object.NewDict()
 	d.Set("Type", object.Name("Annot"))
@@ -90,6 +91,7 @@ func (f *TextField) build(fonts FormFonts, pageRef object.Ref) *object.Dict {
 	return d
 }
 
+// 文本域无需预生成外观流（由 NeedAppearances 交给阅读器），返回 nil。
 func (f *TextField) appearances(w *writer.Writer, fonts FormFonts) *object.Dict { return nil }
 
 // Checkbox 复选框。
@@ -102,9 +104,10 @@ type Checkbox struct {
 	ToolTip  string
 }
 
-// Page 返回字段所在页面。
+// 返回字段所在页面。
 func (f *Checkbox) Page() *page.Page { return f.PageRef }
 
+// 生成复选框（兼部件批注）字典。
 func (f *Checkbox) build(fonts FormFonts, pageRef object.Ref) *object.Dict {
 	d := object.NewDict()
 	d.Set("Type", object.Name("Annot"))
@@ -135,6 +138,7 @@ func (f *Checkbox) build(fonts FormFonts, pageRef object.Ref) *object.Dict {
 	return d
 }
 
+// 生成复选框 Yes/Off 两种外观流并注册为间接对象，返回 /AP /N 字典。
 func (f *Checkbox) appearances(w *writer.Writer, fonts FormFonts) *object.Dict {
 	x0, y0, x1, y1 := f.Rect[0], f.Rect[1], f.Rect[2], f.Rect[3]
 	wd, h := x1-x0, y1-y0
@@ -198,10 +202,12 @@ func Build(w *writer.Writer, fields []Field, fonts FormFonts, pageRefOf func(*pa
 
 // --- 内部工具 ---
 
+// 将浮点数格式化为最简十进制字符串。
 func numStr(v float64) string {
 	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
+// 返回两数中较小者。
 func minF(a, b float64) float64 {
 	if a < b {
 		return a

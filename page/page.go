@@ -33,7 +33,7 @@ var (
 	Tabloid = Size{792, 1224}
 )
 
-// Landscape 返回横向尺寸。
+// 返回横向尺寸。
 func (s Size) Landscape() Size {
 	if s.W > s.H {
 		return s
@@ -41,7 +41,7 @@ func (s Size) Landscape() Size {
 	return Size{s.H, s.W}
 }
 
-// Portrait 返回纵向尺寸。
+// 返回纵向尺寸。
 func (s Size) Portrait() Size {
 	if s.W < s.H {
 		return s
@@ -73,7 +73,7 @@ type Page struct {
 	seq       int
 }
 
-// New 创建页面。
+// 创建页面。
 func New(s Size) *Page {
 	return &Page{
 		Size:     s,
@@ -88,11 +88,13 @@ func New(s Size) *Page {
 	}
 }
 
+// 生成下一个资源名（前缀 + 递增序号）。
 func (p *Page) nextName(prefix string) string {
 	p.seq++
 	return prefix + itoa(p.seq)
 }
 
+// 将非负整数转为十进制字符串（避免引入 strconv）。
 func itoa(v int) string {
 	if v == 0 {
 		return "0"
@@ -109,27 +111,28 @@ func itoa(v int) string {
 
 // --- 资源登记（供序列化使用） ---
 
-// Fonts 返回页面使用的字体资源（名称 → 字体）。
+// 返回页面使用的字体资源（名称 → 字体）。
 func (p *Page) Fonts() map[string]font.Resource { return p.fonts }
 
-// Images 返回页面使用的图像资源。
+// 返回页面使用的图像资源。
 func (p *Page) Images() map[string]*image.Image { return p.images }
 
-// ExtGStates 返回页面使用的扩展图形状态资源。
+// 返回页面使用的扩展图形状态资源。
 func (p *Page) ExtGStates() map[string]*object.Dict { return p.gstates }
 
-// Shadings 返回页面使用的渐变资源。
+// 返回页面使用的渐变资源。
 func (p *Page) Shadings() map[string]*object.Dict { return p.shadings }
 
-// Annotations 返回页面批注。
+// 返回页面批注。
 func (p *Page) Annotations() []annot.Annotation { return p.annots }
 
-// AnnotationRefs 返回以间接引用形式登记的批注（表单部件等）。
+// 返回以间接引用形式登记的批注（表单部件等）。
 func (p *Page) AnnotationRefs() []object.Ref { return p.annotRefs }
 
-// AddAnnotationRef 登记间接批注引用，供文档序列化时加入页面 /Annots。
+// 登记间接批注引用，供文档序列化时加入页面 /Annots。
 func (p *Page) AddAnnotationRef(r object.Ref) { p.annotRefs = append(p.annotRefs, r) }
 
+// 登记字体资源并返回其名称（同一字体复用同一名称）。
 func (p *Page) useFont(f font.Resource) string {
 	if name, ok := p.fontRev[f]; ok {
 		return name
@@ -185,7 +188,7 @@ func (p *Page) TextBox(f font.Resource, size, x, yTop, w float64, s string, alig
 	return f.Ascent(size) - f.Descent(size) + leading*float64(len(lines)-1)
 }
 
-// Underline 为单行文本加下划线（根据字体度量自动定位）。
+// 为单行文本加下划线（根据字体度量自动定位）。
 func (p *Page) Underline(f font.Resource, size, x, y float64, s string) {
 	thick := size * 0.05
 	p.Content.SaveState().LineWidth(thick).
@@ -193,7 +196,7 @@ func (p *Page) Underline(f font.Resource, size, x, y float64, s string) {
 		RestoreState()
 }
 
-// StrikeThrough 为单行文本加删除线。
+// 为单行文本加删除线。
 func (p *Page) StrikeThrough(f font.Resource, size, x, y float64, s string) {
 	thick := size * 0.05
 	p.Content.SaveState().LineWidth(thick).
@@ -203,43 +206,43 @@ func (p *Page) StrikeThrough(f font.Resource, size, x, y float64, s string) {
 
 // --- 图形状态便捷方法 ---
 
-// Save 保存图形状态（配合 Restore 使用）。
+// 保存图形状态（配合 Restore 使用）。
 func (p *Page) Save() *Page { p.Content.SaveState(); return p }
 
-// Restore 恢复图形状态。
+// 恢复图形状态。
 func (p *Page) Restore() *Page { p.Content.RestoreState(); return p }
 
-// Translate 平移坐标系。
+// 平移坐标系。
 func (p *Page) Translate(x, y float64) *Page { p.Content.Translate(x, y); return p }
 
-// Scale 缩放坐标系。
+// 缩放坐标系。
 func (p *Page) Scale(sx, sy float64) *Page { p.Content.Scale(sx, sy); return p }
 
-// RotateCanvas 旋转坐标系（角度制）。
+// 旋转坐标系（角度制）。
 func (p *Page) RotateCanvas(deg float64) *Page { p.Content.Rotate(deg); return p }
 
-// SetFillColor 设置填充色。
+// 设置填充色。
 func (p *Page) SetFillColor(c color.Color) *Page { p.Content.SetFillColor(c); return p }
 
-// SetStrokeColor 设置描边色。
+// 设置描边色。
 func (p *Page) SetStrokeColor(c color.Color) *Page { p.Content.SetStrokeColor(c); return p }
 
-// SetLineWidth 设置线宽。
+// 设置线宽。
 func (p *Page) SetLineWidth(w float64) *Page { p.Content.LineWidth(w); return p }
 
-// SetLineCap 设置线帽。
+// 设置线帽。
 func (p *Page) SetLineCap(c content.LineCap) *Page { p.Content.SetLineCap(c); return p }
 
-// SetLineJoin 设置连接样式。
+// 设置连接样式。
 func (p *Page) SetLineJoin(j content.LineJoin) *Page { p.Content.SetLineJoin(j); return p }
 
-// SetDash 设置虚线样式；空 pattern 恢复实线。
+// 设置虚线样式；空 pattern 恢复实线。
 func (p *Page) SetDash(pattern []float64, phase float64) *Page {
 	p.Content.Dash(pattern, phase)
 	return p
 }
 
-// SetAlpha 设置填充与描边透明度（0–1），通过扩展图形状态实现。
+// 设置填充与描边透明度（0–1），通过扩展图形状态实现。
 func (p *Page) SetAlpha(fill, stroke float64) *Page {
 	d := object.NewDict().Set("Type", object.Name("ExtGState")).
 		Set("ca", object.Real(fill)).Set("CA", object.Real(stroke))
@@ -255,6 +258,7 @@ func (p *Page) SetBlendMode(mode string) *Page {
 	return p
 }
 
+// 登记扩展图形状态并返回资源名（内容相同的状态复用同一名称）。
 func (p *Page) registerGState(d *object.Dict) string {
 	key := string(d.Encode(nil))
 	if name, ok := p.gstateKy[key]; ok {
@@ -268,21 +272,21 @@ func (p *Page) registerGState(d *object.Dict) string {
 
 // --- 形状 ---
 
-// Line 绘制线段。
+// 绘制线段。
 func (p *Page) Line(x1, y1, x2, y2 float64) {
 	p.Content.MoveTo(x1, y1).LineTo(x2, y2).Stroke()
 }
 
-// StrokeRect 描边矩形。
+// 描边矩形。
 func (p *Page) StrokeRect(x, y, w, h float64) { p.Content.Rect(x, y, w, h).Stroke() }
 
-// FillRect 填充矩形。
+// 填充矩形。
 func (p *Page) FillRect(x, y, w, h float64) { p.Content.Rect(x, y, w, h).Fill() }
 
-// FillStrokeRect 填充并描边矩形。
+// 填充并描边矩形。
 func (p *Page) FillStrokeRect(x, y, w, h float64) { p.Content.Rect(x, y, w, h).FillStroke() }
 
-// RoundRectPath 构造圆角矩形路径（不绘制）。
+// 构造圆角矩形路径（不绘制）。
 func (p *Page) RoundRectPath(x, y, w, h, r float64) *Page {
 	k := bezierCircleKappa
 	c := p.Content
@@ -299,16 +303,16 @@ func (p *Page) RoundRectPath(x, y, w, h, r float64) *Page {
 	return p
 }
 
-// StrokeRoundRect 描边圆角矩形。
+// 描边圆角矩形。
 func (p *Page) StrokeRoundRect(x, y, w, h, r float64) {
 	p.RoundRectPath(x, y, w, h, r)
 	p.Content.Stroke()
 }
 
-// FillRoundRect 填充圆角矩形。
+// 填充圆角矩形。
 func (p *Page) FillRoundRect(x, y, w, h, r float64) { p.RoundRectPath(x, y, w, h, r); p.Content.Fill() }
 
-// CirclePath 构造圆形路径（不绘制）。
+// 构造圆形路径（不绘制）。
 func (p *Page) CirclePath(cx, cy, r float64) *Page {
 	k := bezierCircleKappa * r
 	c := p.Content
@@ -321,13 +325,13 @@ func (p *Page) CirclePath(cx, cy, r float64) *Page {
 	return p
 }
 
-// StrokeCircle 描边圆。
+// 描边圆。
 func (p *Page) StrokeCircle(cx, cy, r float64) { p.CirclePath(cx, cy, r); p.Content.Stroke() }
 
-// FillCircle 填充圆。
+// 填充圆。
 func (p *Page) FillCircle(cx, cy, r float64) { p.CirclePath(cx, cy, r); p.Content.Fill() }
 
-// EllipsePath 构造椭圆路径（不绘制）。
+// 构造椭圆路径（不绘制）。
 func (p *Page) EllipsePath(cx, cy, rx, ry float64) *Page {
 	kx, ky := bezierCircleKappa*rx, bezierCircleKappa*ry
 	c := p.Content
@@ -340,16 +344,16 @@ func (p *Page) EllipsePath(cx, cy, rx, ry float64) *Page {
 	return p
 }
 
-// StrokeEllipse 描边椭圆。
+// 描边椭圆。
 func (p *Page) StrokeEllipse(cx, cy, rx, ry float64) {
 	p.EllipsePath(cx, cy, rx, ry)
 	p.Content.Stroke()
 }
 
-// FillEllipse 填充椭圆。
+// 填充椭圆。
 func (p *Page) FillEllipse(cx, cy, rx, ry float64) { p.EllipsePath(cx, cy, rx, ry); p.Content.Fill() }
 
-// Polygon 折线/多边形路径；closePath 为 true 时闭合。
+// 折线/多边形路径；closePath 为 true 时闭合。
 func (p *Page) Polygon(pts []Point, closePath bool) *Page {
 	if len(pts) == 0 {
 		return p
@@ -364,10 +368,10 @@ func (p *Page) Polygon(pts []Point, closePath bool) *Page {
 	return p
 }
 
-// StrokePolygon 描边多边形。
+// 描边多边形。
 func (p *Page) StrokePolygon(pts []Point) { p.Polygon(pts, true); p.Content.Stroke() }
 
-// FillPolygon 填充多边形。
+// 填充多边形。
 func (p *Page) FillPolygon(pts []Point) { p.Polygon(pts, true); p.Content.Fill() }
 
 // --- 渐变 ---
@@ -385,7 +389,7 @@ func (p *Page) FillAxialGradient(x, y, w, h float64, c1, c2 color.Color, horizon
 	p.Content.SaveState().Rect(x, y, w, h).Clip().EndPath().PaintShading(name).RestoreState()
 }
 
-// FillRadialGradient 以径向渐变填充圆形区域（从中心 c1 到边缘 c2）。
+// 以径向渐变填充圆形区域（从中心 c1 到边缘 c2）。
 func (p *Page) FillRadialGradient(cx, cy, r float64, c1, c2 color.Color) {
 	coords := object.Array{object.Real(cx), object.Real(cy), object.Real(0),
 		object.Real(cx), object.Real(cy), object.Real(r)}
@@ -395,6 +399,8 @@ func (p *Page) FillRadialGradient(cx, cy, r float64, c1, c2 color.Color) {
 	p.Content.Clip().EndPath().PaintShading(name).RestoreState()
 }
 
+// registerShading 构造 c1→c2 的渐变字典并登记，返回资源名。
+// typ 为 ShadingType（2 轴向 / 3 径向），coords 为渐变坐标。
 func (p *Page) registerShading(typ int, coords object.Array, c1, c2 color.Color) string {
 	// 渐变两端须处于同一色彩空间：统一转为 RGB
 	r1, r2 := color.ToRGB(c1), color.ToRGB(c2)
@@ -425,16 +431,17 @@ func (p *Page) registerShading(typ int, coords object.Array, c1, c2 color.Color)
 
 // --- 图像 ---
 
-// DrawImage 以指定位置与尺寸绘制图像。
+// 以指定位置与尺寸绘制图像。
 func (p *Page) DrawImage(im *image.Image, x, y, w, h float64) {
 	p.Content.DrawImage(p.useImage(im), x, y, w, h)
 }
 
-// DrawImageNatural 以原始像素尺寸（1 像素 = 1 磅）绘制图像。
+// 以原始像素尺寸（1 像素 = 1 磅）绘制图像。
 func (p *Page) DrawImageNatural(im *image.Image, x, y float64) {
 	p.DrawImage(im, x, y, float64(im.Width), float64(im.Height))
 }
 
+// 登记图像资源并返回其名称（同一图像复用同一名称）。
 func (p *Page) useImage(im *image.Image) string {
 	if name, ok := p.imageRev[im]; ok {
 		return name
@@ -447,15 +454,15 @@ func (p *Page) useImage(im *image.Image) string {
 
 // --- 批注 ---
 
-// AddAnnotation 添加批注。
+// 添加批注。
 func (p *Page) AddAnnotation(a annot.Annotation) { p.annots = append(p.annots, a) }
 
-// AddURILink 添加 URI 链接热区。
+// 添加 URI 链接热区。
 func (p *Page) AddURILink(rect [4]float64, uri string) {
 	p.AddAnnotation(annot.LinkURI{Base: annot.Base{Rect: rect}, URI: uri})
 }
 
-// AddPageLink 添加页内跳转链接热区。
+// 添加页内跳转链接热区。
 func (p *Page) AddPageLink(rect [4]float64, dest annot.Destination) {
 	p.AddAnnotation(annot.LinkGoTo{Base: annot.Base{Rect: rect}, Dest: dest})
 }

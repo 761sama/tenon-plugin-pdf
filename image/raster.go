@@ -8,7 +8,7 @@ import (
 	_ "image/png" // 注册 PNG 解码器
 )
 
-// decodeRaster 解码 PNG/GIF 为 8 位灰度或 RGB，并提取透明通道为 SMask。
+// 解码 PNG/GIF 为 8 位灰度或 RGB，并提取透明通道为 SMask。
 func decodeRaster(data []byte, format string) (*Image, error) {
 	src, _, err := stdimage.Decode(bytes.NewReader(data))
 	if err != nil {

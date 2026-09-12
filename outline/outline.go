@@ -22,10 +22,10 @@ type Item struct {
 	closed bool
 }
 
-// SetClosed 设置该条目默认折叠子级。
+// 设置该条目默认折叠子级。
 func (it *Item) SetClosed(closed bool) *Item { it.closed = closed; return it }
 
-// Add 添加子条目。
+// 添加子条目。
 func (it *Item) Add(title string, dest annot.Destination) *Item {
 	child := &Item{Title: title, Dest: dest, parent: it}
 	it.Children = append(it.Children, child)
@@ -37,14 +37,14 @@ type Outline struct {
 	roots []*Item
 }
 
-// Add 添加顶级条目。
+// 添加顶级条目。
 func (o *Outline) Add(title string, dest annot.Destination) *Item {
 	it := &Item{Title: title, Dest: dest}
 	o.roots = append(o.roots, it)
 	return it
 }
 
-// Empty 返回大纲是否为空。
+// 返回大纲是否为空。
 func (o *Outline) Empty() bool { return len(o.roots) == 0 }
 
 // Build 将大纲序列化为间接对象，返回 /Outlines 根引用。
@@ -63,7 +63,7 @@ func (o *Outline) Build(w *writer.Writer, res annot.Resolver) object.Ref {
 	return rootRef
 }
 
-// buildLevel 构建一层条目，返回可见条目总数。
+// 构建一层条目，返回可见条目总数。
 func (o *Outline) buildLevel(w *writer.Writer, parent *Item, parentRef object.Ref, items []*Item, res annot.Resolver) int {
 	for _, it := range items {
 		it.ref = w.Alloc()

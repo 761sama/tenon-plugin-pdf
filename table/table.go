@@ -36,10 +36,10 @@ type Cell struct {
 	Size  float64         // 字号（0 取 Table.FontSize）
 }
 
-// C 构造普通单元格。
+// 构造普通单元格。
 func C(text string) Cell { return Cell{Text: text, ColSpan: 1, RowSpan: 1} }
 
-// Span 返回跨 colSpan 列、rowSpan 行的合并单元格。
+// 返回跨 colSpan 列、rowSpan 行的合并单元格。
 func (c Cell) Span(colSpan, rowSpan int) Cell {
 	if colSpan < 1 {
 		colSpan = 1
@@ -84,12 +84,12 @@ type Table struct {
 	AutoWidth bool
 }
 
-// New 创建表格。
+// 创建表格。
 func New(cols ...Column) *Table {
 	return &Table{Columns: cols, HeaderRepeat: true}
 }
 
-// AddRow 追加一行；单元格数量不足补空串，超出截断。
+// 追加一行；单元格数量不足补空串，超出截断。
 func (t *Table) AddRow(cells ...string) *Table {
 	row := make([]Cell, len(t.Columns))
 	for i := range row {
@@ -113,7 +113,7 @@ func (t *Table) AddRowCells(cells ...Cell) *Table {
 	return t
 }
 
-// AddRows 批量追加。
+// 批量追加。
 func (t *Table) AddRows(rows [][]string) *Table {
 	for _, r := range rows {
 		t.AddRow(r...)
@@ -121,6 +121,7 @@ func (t *Table) AddRows(rows [][]string) *Table {
 	return t
 }
 
+// 返回内容字体，未设置时取默认 Helvetica。
 func (t *Table) bodyFont() font.Resource {
 	if t.Font != nil {
 		return t.Font
@@ -128,6 +129,7 @@ func (t *Table) bodyFont() font.Resource {
 	return font.Helvetica
 }
 
+// 返回表头字体，未设置时取默认 Helvetica-Bold。
 func (t *Table) headFont() font.Resource {
 	if t.HeaderFont != nil {
 		return t.HeaderFont
@@ -135,6 +137,7 @@ func (t *Table) headFont() font.Resource {
 	return font.HelveticaBold
 }
 
+// 返回内容字号，未设置时取默认 10。
 func (t *Table) fontSize() float64 {
 	if t.FontSize > 0 {
 		return t.FontSize
@@ -142,6 +145,7 @@ func (t *Table) fontSize() float64 {
 	return 10
 }
 
+// 返回表头字号，未设置时取内容字号。
 func (t *Table) headerSize() float64 {
 	if t.HeaderSize > 0 {
 		return t.HeaderSize
@@ -149,6 +153,7 @@ func (t *Table) headerSize() float64 {
 	return t.fontSize()
 }
 
+// 返回单元格内边距，未设置时取默认 4。
 func (t *Table) padding() float64 {
 	if t.Padding > 0 {
 		return t.Padding
@@ -156,6 +161,7 @@ func (t *Table) padding() float64 {
 	return 4
 }
 
+// 返回表头背景色，未设置时取默认 Gray(0.85)。
 func (t *Table) headerBg() color.Color {
 	if t.HeaderBg != nil {
 		return t.HeaderBg
@@ -163,6 +169,7 @@ func (t *Table) headerBg() color.Color {
 	return color.Gray(0.85)
 }
 
+// 返回边框色，未设置时取默认黑色。
 func (t *Table) border() color.Color {
 	if t.Border != nil {
 		return t.Border
@@ -170,6 +177,7 @@ func (t *Table) border() color.Color {
 	return color.Black
 }
 
+// 返回边框线宽，未设置时取默认 0.5。
 func (t *Table) borderW() float64 {
 	if t.BorderW > 0 {
 		return t.BorderW
@@ -177,6 +185,7 @@ func (t *Table) borderW() float64 {
 	return 0.5
 }
 
+// 返回内容文本色，未设置时取默认黑色。
 func (t *Table) textColor() color.Color {
 	if t.TextColor != nil {
 		return t.TextColor
@@ -184,6 +193,7 @@ func (t *Table) textColor() color.Color {
 	return color.Black
 }
 
+// 返回表头文本色，未设置时取内容文本色。
 func (t *Table) headerTextColor() color.Color {
 	if t.HeaderColor != nil {
 		return t.HeaderColor
@@ -191,7 +201,7 @@ func (t *Table) headerTextColor() color.Color {
 	return t.textColor()
 }
 
-// headerRowCount 表头行数（截断到数据行数）。
+// 表头行数（截断到数据行数）。
 func (t *Table) headerRowCount() int {
 	n := t.HeaderRows
 	if n > len(t.Rows) {
@@ -200,7 +210,7 @@ func (t *Table) headerRowCount() int {
 	return n
 }
 
-// hasHeader 所有列标题为空时不绘制表头。
+// 所有列标题为空时不绘制表头。
 func (t *Table) hasHeader() bool {
 	for _, c := range t.Columns {
 		if c.Title != "" {
@@ -242,7 +252,7 @@ func (t *Table) colWidths(total float64, grid [][]placedCell) []float64 {
 	return ws
 }
 
-// rowHeight 按内容换行计算行高（内容行，不考虑合并）。
+// 按内容换行计算行高（内容行，不考虑合并）。
 func (t *Table) rowHeight(cells []string, widths []float64) float64 {
 	f, size, pad := t.bodyFont(), t.fontSize(), t.padding()
 	maxLines := 1
@@ -257,6 +267,7 @@ func (t *Table) rowHeight(cells []string, widths []float64) float64 {
 	return float64(maxLines)*f.LineHeight(size) + 2*pad
 }
 
+// 列标题表头的行高（表头字体行高 + 上下内边距）。
 func (t *Table) headerHeight() float64 {
 	f := t.headFont()
 	return f.LineHeight(t.headerSize()) + 2*t.padding()
@@ -446,7 +457,7 @@ func (t *Table) splitRuns(runs *[]pageRun, cur pageRun, be int, heights []float6
 	return next, ptop - headerH - (total - wTopOfLast(*runs))
 }
 
-// wTopOfLast 返回 runs 末个（拆分）run 的窗口起点。
+// 返回 runs 末个（拆分）run 的窗口起点。
 func wTopOfLast(runs []pageRun) float64 { return runs[len(runs)-1].wTop }
 
 // cleanCut 在 (wTop, limit] 内寻找不切断任何单元格文本行的最大拆分点：
@@ -528,7 +539,7 @@ func (t *Table) cleanCut(grid [][]placedCell, widths, heights []float64,
 	return 0
 }
 
-// sortFloatsDesc 降序插入排序（候选数量有限）。
+// 降序插入排序（候选数量有限）。
 func sortFloatsDesc(a []float64) {
 	for i := 1; i < len(a); i++ {
 		for j := i; j > 0 && a[j] > a[j-1]; j-- {
@@ -537,7 +548,7 @@ func sortFloatsDesc(a []float64) {
 	}
 }
 
-// breakStart 返回覆盖第 j 行的跨行块的起始行。
+// 返回覆盖第 j 行的跨行块的起始行。
 func (t *Table) breakStart(j int, grid [][]placedCell) int {
 	start := j
 	for r := 0; r < j; r++ {
@@ -550,7 +561,7 @@ func (t *Table) breakStart(j int, grid [][]placedCell) int {
 	return start
 }
 
-// rowHeights 计算各行高度：单行单元格先定高，跨行单元格按需撑高末行。
+// 计算各行高度：单行单元格先定高，跨行单元格按需撑高末行。
 func (t *Table) rowHeights(grid [][]placedCell, widths []float64) []float64 {
 	n := len(t.Rows)
 	hs := make([]float64, n)
@@ -585,13 +596,13 @@ func (t *Table) rowHeights(grid [][]placedCell, widths []float64) []float64 {
 	return hs
 }
 
-// minRowHeight 空行最小行高。
+// 空行最小行高。
 func (t *Table) minRowHeight() float64 {
 	f := t.bodyFont()
 	return f.LineHeight(t.fontSize()) + 2*t.padding()
 }
 
-// cellHeight 单元格内容所需高度（按给定宽度换行；字体/字号取单元格覆盖）。
+// 单元格内容所需高度（按给定宽度换行；字体/字号取单元格覆盖）。
 func (t *Table) cellHeight(c placedCell, w float64) float64 {
 	f, size, pad := t.bodyFont(), t.fontSize(), t.padding()
 	if c.Font != nil {
@@ -604,6 +615,7 @@ func (t *Table) cellHeight(c placedCell, w float64) float64 {
 	return float64(lines)*f.LineHeight(size) + 2*pad
 }
 
+// 返回从第 col 列起连续 span 列的总宽度。
 func spanWidth(widths []float64, col, span int) float64 {
 	w := 0.0
 	for i := col; i < col+span && i < len(widths); i++ {
@@ -643,7 +655,7 @@ func (t *Table) cellText(c placedCell, w, ch float64, header bool) (font.Resourc
 	return f, size, leading, lines, voff
 }
 
-// renderRun 渲染一页：表头（表头行或列标题）+ [start, end) 内容行。
+// 渲染一页：表头（表头行或列标题）+ [start, end) 内容行。
 func (t *Table) renderRun(p *page.Page, x, top, w float64, widths, heights []float64,
 	grid [][]placedCell, headerH float64, headerRows, start, end int) {
 	y := top
@@ -657,7 +669,7 @@ func (t *Table) renderRun(p *page.Page, x, top, w float64, widths, heights []flo
 	t.renderRows(p, x, y, widths, heights, grid, start, end, false)
 }
 
-// renderRows 渲染 [start, end) 行；header 为 true 时应用表头样式（底色/文本色）。
+// 渲染 [start, end) 行；header 为 true 时应用表头样式（底色/文本色）。
 func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float64,
 	grid [][]placedCell, start, end int, header bool) {
 	pad := t.padding()
@@ -805,6 +817,7 @@ func (t *Table) renderSplitRun(p *page.Page, x, top float64, widths, heights []f
 	}
 }
 
+// 返回两数中较大者。
 func maxF(a, b float64) float64 {
 	if a > b {
 		return a
@@ -812,6 +825,7 @@ func maxF(a, b float64) float64 {
 	return b
 }
 
+// 返回两数中较小者。
 func minF(a, b float64) float64 {
 	if a < b {
 		return a
@@ -819,7 +833,7 @@ func minF(a, b float64) float64 {
 	return b
 }
 
-// renderHeader 渲染表头行（灰底、加粗、居中）。
+// 渲染表头行（灰底、加粗、居中）。
 func (t *Table) renderHeader(p *page.Page, x, y, w float64, widths []float64, hh float64) {
 	p.Save().SetFillColor(t.headerBg())
 	p.FillRect(x, y-hh, w, hh)

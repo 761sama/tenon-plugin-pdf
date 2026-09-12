@@ -13,7 +13,7 @@ const PlaceholderHexLen = 32768
 // ByteRangePlaceholder 是 /ByteRange 占位符（定宽 10 位数字，回填不改变长度）。
 const ByteRangePlaceholder = "[0000000000 0000000000 0000000000 0000000000]"
 
-// ContentsPlaceholder 返回 /Contents 占位符（全零十六进制字符串）。
+// 返回 /Contents 占位符（全零十六进制字符串）。
 func ContentsPlaceholder() string {
 	return "<" + strings.Repeat("0", PlaceholderHexLen) + ">"
 }
@@ -29,7 +29,7 @@ type Field struct {
 	SignerName string     // 可见签名外观中显示的签署人名称（仅 Rect 非零时生效）
 }
 
-// Visible 报告该字段是否为可见签名（指定了非零矩形）。
+// 报告该字段是否为可见签名（指定了非零矩形）。
 func (f *Field) Visible() bool {
 	return f.Rect != [4]float64{}
 }

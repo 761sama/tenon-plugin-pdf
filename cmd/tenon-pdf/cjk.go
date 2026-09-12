@@ -20,7 +20,7 @@ import (
 //go:embed assets/NotoSansSC-Subset.ttf
 var cjkSubsetFont []byte
 
-// cmdCJK 生成中文演示 PDF：中文采购单表格（子集嵌入字体、跨页重复表头）。
+// 生成中文演示 PDF：中文采购单表格（子集嵌入字体、跨页重复表头）。
 func cmdCJK(args []string) error {
 	fs := flag.NewFlagSet("cjk", flag.ExitOnError)
 	out := fs.String("o", "cjk-demo.pdf", "输出文件")

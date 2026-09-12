@@ -9,6 +9,7 @@ type rc4Cipher struct {
 	j uint8
 }
 
+// 以 key 初始化 RC4 状态（KSA 密钥调度）。
 func newRC4(key []byte) *rc4Cipher {
 	c := &rc4Cipher{}
 	for i := 0; i < 256; i++ {
@@ -22,6 +23,7 @@ func newRC4(key []byte) *rc4Cipher {
 	return c
 }
 
+// 生成密钥流并与 data 异或（PRGA；加解密为同一操作）。
 func (c *rc4Cipher) crypt(data []byte) []byte {
 	out := make([]byte, len(data))
 	for k := range data {
@@ -33,5 +35,5 @@ func (c *rc4Cipher) crypt(data []byte) []byte {
 	return out
 }
 
-// rc4 便捷函数。
+// 便捷函数。
 func rc4(key, data []byte) []byte { return newRC4(key).crypt(data) }

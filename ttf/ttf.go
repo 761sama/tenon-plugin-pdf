@@ -47,7 +47,7 @@ func Parse(data []byte) (*Font, error) {
 	return parseAt(data, 0)
 }
 
-// parseAt 从 sfnt 目录起始偏移 off 解析单个字体（TTC 成员或独立字体）。
+// 从 sfnt 目录起始偏移 off 解析单个字体（TTC 成员或独立字体）。
 func parseAt(data []byte, off int) (*Font, error) {
 	if off < 0 || off+12 > len(data) {
 		return nil, fmt.Errorf("ttf: 文件过短")
@@ -96,6 +96,7 @@ func parseAt(data []byte, off int) (*Font, error) {
 	return f, nil
 }
 
+// 返回 tag 表的原始数据切片；表缺失时报错。
 func (f *Font) table(tag string) ([]byte, error) {
 	t, ok := f.tables[tag]
 	if !ok {
@@ -104,6 +105,7 @@ func (f *Font) table(tag string) ([]byte, error) {
 	return f.data[t[0] : t[0]+t[1]], nil
 }
 
+// 解析 head 表：UnitsPerEm 与字体包围盒。
 func (f *Font) parseHead() error {
 	d, err := f.table("head")
 	if err != nil {
@@ -120,6 +122,7 @@ func (f *Font) parseHead() error {
 	return nil
 }
 
+// 解析 hhea 表：Ascent/Descent/LineGap 与 hmtx 步进条目数。
 func (f *Font) parseHhea() error {
 	d, err := f.table("hhea")
 	if err != nil {
@@ -132,6 +135,7 @@ func (f *Font) parseHhea() error {
 	return nil
 }
 
+// 解析 maxp 表：字形总数 NumGlyphs。
 func (f *Font) parseMaxp() error {
 	d, err := f.table("maxp")
 	if err != nil {
@@ -141,6 +145,7 @@ func (f *Font) parseMaxp() error {
 	return nil
 }
 
+// 解析 hmtx 表：各字形的步进宽度与左侧边距（等宽尾部沿用末条步进）。
 func (f *Font) parseHmtx() error {
 	d, err := f.table("hmtx")
 	if err != nil {
@@ -166,6 +171,7 @@ func (f *Font) parseHmtx() error {
 	return nil
 }
 
+// 解析 loca 表：各字形在 glyf 中的偏移（依 head 的 indexToLocFormat 区分长短格式）。
 func (f *Font) parseLoca() error {
 	d, err := f.table("loca")
 	if err != nil {
@@ -184,6 +190,7 @@ func (f *Font) parseLoca() error {
 	return nil
 }
 
+// 解析 cmap 表，按平台/编码优先级选取最优 format 12 与 format 4 子表。
 func (f *Font) parseCmap() error {
 	d, err := f.table("cmap")
 	if err != nil {
@@ -269,7 +276,7 @@ func (f *Font) parseOS2() {
 	f.CapHeight = int(int16(u16(d, 88)))
 }
 
-// parseName 读取 PostScript 名称（name id 6）。
+// 读取 PostScript 名称（name id 6）。
 func (f *Font) parseName() {
 	d, err := f.table("name")
 	if err != nil || len(d) < 6 {
@@ -318,7 +325,7 @@ func (f *Font) parseName() {
 	}
 }
 
-// PSName 返回字体的 PostScript 名称。
+// 返回字体的 PostScript 名称。
 func (f *Font) PSName() string {
 	if f.psName != "" {
 		return f.psName
@@ -326,7 +333,7 @@ func (f *Font) PSName() string {
 	return "SubsetFont"
 }
 
-// Advance 返回字形的步进宽度（字体单位）。
+// 返回字形的步进宽度（字体单位）。
 func (f *Font) Advance(gid uint16) uint16 {
 	if int(gid) >= len(f.advances) {
 		return 0
@@ -334,7 +341,7 @@ func (f *Font) Advance(gid uint16) uint16 {
 	return f.advances[gid]
 }
 
-// GlyphIndex 查找 Unicode 码点对应的字形 ID（0 表示缺失）。
+// 查找 Unicode 码点对应的字形 ID（0 表示缺失）。
 func (f *Font) GlyphIndex(r rune) uint16 {
 	if r > 0xFFFF {
 		if f.cmap12 != nil {
@@ -353,6 +360,7 @@ func (f *Font) GlyphIndex(r rune) uint16 {
 	return 0
 }
 
+// 在 cmap format 4 子表 d 中查码点 c 的字形 ID（0 表示缺失）。
 func lookup4(d []byte, c uint16) uint16 {
 	segCount := int(u16(d, 6)) / 2
 	endOff := 14
@@ -386,6 +394,7 @@ func lookup4(d []byte, c uint16) uint16 {
 	return 0
 }
 
+// 在 cmap format 12 子表 d 中二分查找码点 c 的字形 ID（0 表示缺失）。
 func lookup12(d []byte, c uint32) uint16 {
 	n := int(u32(d, 12))
 	lo, hi := 0, n-1
@@ -405,7 +414,7 @@ func lookup12(d []byte, c uint32) uint16 {
 	return 0
 }
 
-// glyphData 返回字形的原始 glyf 数据（可能为空字形）。
+// 返回字形的原始 glyf 数据（可能为空字形）。
 func (f *Font) glyphData(gid uint16) []byte {
 	if int(gid) >= f.NumGlyphs {
 		return nil
@@ -421,7 +430,7 @@ func (f *Font) glyphData(gid uint16) []byte {
 	return glyf[start:end]
 }
 
-// compositeComponents 解析复合字形的组件字形 ID 列表及其在数据中的偏移。
+// 解析复合字形的组件字形 ID 列表及其在数据中的偏移。
 func compositeComponents(d []byte) (comps []compositePart, err error) {
 	if len(d) < 10 {
 		return nil, fmt.Errorf("ttf: 复合字形数据过短")

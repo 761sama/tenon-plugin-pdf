@@ -14,17 +14,17 @@ import (
 	"time"
 )
 
-// GenerateRSAKey 生成 RSA 2048 私钥。
+// 生成 RSA 2048 私钥。
 func GenerateRSAKey() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, 2048)
 }
 
-// GenerateECDSAKey 生成 ECDSA P-256 私钥。
+// 生成 ECDSA P-256 私钥。
 func GenerateECDSAKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
-// GenerateSelfSigned 生成自签名证书（测试/演示用途）。
+// 生成自签名证书（测试/演示用途）。
 func GenerateSelfSigned(commonName string, key crypto.Signer) (*x509.Certificate, error) {
 	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
@@ -85,7 +85,7 @@ func GenerateSignedCertificate(commonName string, key crypto.Signer,
 	return x509.ParseCertificate(der)
 }
 
-// MarshalCertChainPEM 将证书链依次编码为一个 PEM 文件（多个 CERTIFICATE 块）。
+// 将证书链依次编码为一个 PEM 文件（多个 CERTIFICATE 块）。
 func MarshalCertChainPEM(certs ...*x509.Certificate) []byte {
 	var out []byte
 	for _, c := range certs {
@@ -94,7 +94,7 @@ func MarshalCertChainPEM(certs ...*x509.Certificate) []byte {
 	return out
 }
 
-// ParseCertChainPEM 解析含多个 CERTIFICATE 块的 PEM 数据。
+// 解析含多个 CERTIFICATE 块的 PEM 数据。
 func ParseCertChainPEM(data []byte) ([]*x509.Certificate, error) {
 	var out []*x509.Certificate
 	for {
@@ -118,12 +118,12 @@ func ParseCertChainPEM(data []byte) ([]*x509.Certificate, error) {
 	return out, nil
 }
 
-// MarshalCertPEM 将证书编码为 PEM。
+// 将证书编码为 PEM。
 func MarshalCertPEM(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 }
 
-// MarshalKeyPEM 将私钥编码为 PEM（PKCS#8）。
+// 将私钥编码为 PEM（PKCS#8）。
 func MarshalKeyPEM(key crypto.Signer) ([]byte, error) {
 	der, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
@@ -132,7 +132,7 @@ func MarshalKeyPEM(key crypto.Signer) ([]byte, error) {
 	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), nil
 }
 
-// ParseCertPEM 解析 PEM 证书。
+// 解析 PEM 证书。
 func ParseCertPEM(data []byte) (*x509.Certificate, error) {
 	blk, _ := pem.Decode(data)
 	if blk == nil {
@@ -141,7 +141,7 @@ func ParseCertPEM(data []byte) (*x509.Certificate, error) {
 	return x509.ParseCertificate(blk.Bytes)
 }
 
-// ParseKeyPEM 解析 PEM 私钥（PKCS#8 或 PKCS#1 或 SEC1）。
+// 解析 PEM 私钥（PKCS#8 或 PKCS#1 或 SEC1）。
 func ParseKeyPEM(data []byte) (crypto.Signer, error) {
 	blk, _ := pem.Decode(data)
 	if blk == nil {

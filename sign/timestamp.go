@@ -34,7 +34,7 @@ type TSAOptions struct {
 	Timeout time.Duration // 请求超时，默认 30 秒
 }
 
-// FetchTimestamp 向 TSA 请求 data 的时间戳令牌，返回 TimeStampToken（ContentInfo DER）。
+// 向 TSA 请求 data 的时间戳令牌，返回 TimeStampToken（ContentInfo DER）。
 func FetchTimestamp(data []byte, opts TSAOptions) ([]byte, error) {
 	if opts.URL == "" {
 		return nil, fmt.Errorf("sign: TSA URL 为空")
@@ -136,7 +136,7 @@ func MockTSAHandler(key crypto.Signer, cert *x509.Certificate) http.Handler {
 	})
 }
 
-// asnInt 解析 INTEGER TLV 为 int。
+// 解析 INTEGER TLV 为 int。
 func asnInt(t tlv) int {
 	n := 0
 	for _, b := range t.content {
@@ -181,7 +181,7 @@ func BuildTimestampResponse(reqDER []byte, key crypto.Signer, cert *x509.Certifi
 	), nil
 }
 
-// timestampAttr 构建 signature-time-stamp 未认证属性。
+// 构建 signature-time-stamp 未认证属性。
 func timestampAttr(token []byte) []byte {
 	return derSeq(derOID(oidAttrSignatureTimeStamp...), derSet(token))
 }
@@ -254,7 +254,7 @@ func buildTimestampToken(tstInfo []byte, key crypto.Signer, cert *x509.Certifica
 	), nil
 }
 
-// buildTSTInfo 编码 TSTInfo（策略 OID 由调用方给定）。
+// 编码 TSTInfo（策略 OID 由调用方给定）。
 func buildTSTInfo(policyOID []int, imprint []byte, serial *big.Int, genTime time.Time) []byte {
 	return derSeq(
 		derInt(big.NewInt(1)),
@@ -271,6 +271,7 @@ type timestampInfo struct {
 	Imprint []byte    // messageImprint 摘要（应等于签名值的 SHA-256）
 }
 
+// 解析令牌，提取 TSTInfo 的 messageImprint 与 genTime。
 func parseTimestampToken(token []byte) (*timestampInfo, error) {
 	top, _, err := readTLV(token)
 	if err != nil || top.tag != 0x30 {

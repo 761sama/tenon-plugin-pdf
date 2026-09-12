@@ -18,7 +18,7 @@ const (
 	AlignJustify // 两端对齐（通过调整单词间距实现）
 )
 
-// Wrap 按最大宽度对文本贪心换行，长单词按字符拆分。保留显式换行符。
+// 按最大宽度对文本贪心换行，长单词按字符拆分。保留显式换行符。
 func Wrap(f font.Resource, size, maxWidth float64, s string) []string {
 	var lines []string
 	for _, para := range strings.Split(s, "\n") {
@@ -27,6 +27,7 @@ func Wrap(f font.Resource, size, maxWidth float64, s string) []string {
 	return lines
 }
 
+// 对单段文本（不含换行符）按最大宽度贪心换行。
 func wrapLine(f font.Resource, size, maxWidth float64, s string) []string {
 	words := strings.Fields(s)
 	if len(words) == 0 {
@@ -74,7 +75,7 @@ func wrapLine(f font.Resource, size, maxWidth float64, s string) []string {
 	return lines
 }
 
-// splitWord 将单词拆成"恰好不超过 maxWidth 的前缀"与剩余部分。
+// 将单词拆成"恰好不超过 maxWidth 的前缀"与剩余部分。
 func splitWord(f font.Resource, size, maxWidth float64, word string) (head, rest string) {
 	w := 0.0
 	for i, r := range word {
@@ -87,7 +88,7 @@ func splitWord(f font.Resource, size, maxWidth float64, word string) (head, rest
 	return word, ""
 }
 
-// OffsetX 计算一行文本在指定宽度与对齐方式下的水平起始偏移。
+// 计算一行文本在指定宽度与对齐方式下的水平起始偏移。
 func OffsetX(f font.Resource, size, width float64, line string, align Alignment) float64 {
 	lw := f.TextWidth(line, size)
 	switch align {

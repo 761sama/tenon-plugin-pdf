@@ -35,5 +35,5 @@ type Kerned interface {
 	EncodeKerned(s string) []any
 }
 
-// BuildDict 实现 Resource：标准 14 字体无需嵌入，直接返回字典。
+// 实现 Resource：标准 14 字体无需嵌入，直接返回字典。
 func (f *Font) BuildDict(w *writer.Writer) *object.Dict { return f.Dict() }

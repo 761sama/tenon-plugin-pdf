@@ -15,7 +15,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// cmdSign 生成演示文档并进行数字签名。
+// 生成演示文档并进行数字签名。
 func cmdSign(args []string) error {
 	fs := flag.NewFlagSet("sign", flag.ExitOnError)
 	out := fs.String("o", "signed-demo.pdf", "输出文件")
@@ -184,7 +184,7 @@ func cmdSign(args []string) error {
 	return os.WriteFile(*out, signed, 0644)
 }
 
-// cmdVerify 校验 PDF 数字签名。
+// 校验 PDF 数字签名。
 func cmdVerify(args []string) error {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 	rootPath := fs.String("root", "", "受信根证书 PEM（设置后启用证书信任链验证）")
@@ -247,7 +247,7 @@ func cmdVerify(args []string) error {
 	return fmt.Errorf("证书链验证失败")
 }
 
-// cmdVerifyAll 逐个校验多重签名（会签）。
+// 逐个校验多重签名（会签）。
 func cmdVerifyAll(data []byte, rootPath string) error {
 	var results []*sign.VerifyResult
 	var err error
@@ -291,7 +291,7 @@ func cmdVerifyAll(data []byte, rootPath string) error {
 	return nil
 }
 
-// loadOrGenerateKeys 加载或生成证书与私钥。
+// 加载或生成证书与私钥。
 func loadOrGenerateKeys(certPath, keyPath, selfSignCN string, useECDSA bool) (*x509.Certificate, crypto.Signer, error) {
 	if certPath != "" && keyPath != "" {
 		cb, err := os.ReadFile(certPath)

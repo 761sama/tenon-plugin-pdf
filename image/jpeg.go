@@ -2,7 +2,7 @@ package image
 
 import "fmt"
 
-// decodeJPEG 解析 JPEG 帧头获取尺寸与颜色分量，数据原样嵌入（DCTDecode）。
+// 解析 JPEG 帧头获取尺寸与颜色分量，数据原样嵌入（DCTDecode）。
 func decodeJPEG(data []byte) (*Image, error) {
 	if len(data) < 4 || data[0] != 0xff || data[1] != 0xd8 {
 		return nil, fmt.Errorf("image: 非法 JPEG 数据")
@@ -59,6 +59,7 @@ func decodeJPEG(data []byte) (*Image, error) {
 	return nil, fmt.Errorf("image: JPEG 中未找到 SOF 段")
 }
 
+// 判断 JPEG 标记是否为 SOF（帧起始，含尺寸信息）。
 func isSOF(m byte) bool {
 	switch m {
 	case 0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf:

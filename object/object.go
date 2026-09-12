@@ -17,7 +17,7 @@ type Object interface {
 	Encode(dst []byte) []byte
 }
 
-// Serialize 返回对象的完整序列化字节。
+// 返回对象的完整序列化字节。
 func Serialize(o Object) []byte { return o.Encode(nil) }
 
 const upperhex = "0123456789ABCDEF"
@@ -29,6 +29,7 @@ var Null = null{}
 
 type null struct{}
 
+// 实现 Object 接口：将 null 序列化追加到 dst。
 func (null) Encode(dst []byte) []byte { return append(dst, "null"...) }
 
 // --- 布尔 ---
@@ -36,6 +37,7 @@ func (null) Encode(dst []byte) []byte { return append(dst, "null"...) }
 // Bool 布尔对象。
 type Bool bool
 
+// 实现 Object 接口：将布尔值序列化为 true/false 追加到 dst。
 func (b Bool) Encode(dst []byte) []byte {
 	if b {
 		return append(dst, "true"...)
@@ -48,11 +50,13 @@ func (b Bool) Encode(dst []byte) []byte {
 // Int 整数对象。
 type Int int64
 
+// 实现 Object 接口：将整数按十进制序列化追加到 dst。
 func (i Int) Encode(dst []byte) []byte { return strconv.AppendInt(dst, int64(i), 10) }
 
 // Real 实数对象。
 type Real float64
 
+// 实现 Object 接口：将实数序列化追加到 dst。
 func (r Real) Encode(dst []byte) []byte {
 	return strconv.AppendFloat(dst, float64(r), 'f', -1, 64)
 }
@@ -65,6 +69,7 @@ const nameDelims = "()<>[]{}/%#"
 // Name 名称对象（/Name）。非法字符自动转义为 #XX。
 type Name string
 
+// 实现 Object 接口：将名称对象（含转义）序列化追加到 dst。
 func (n Name) Encode(dst []byte) []byte {
 	dst = append(dst, '/')
 	for i := 0; i < len(n); i++ {
@@ -83,7 +88,7 @@ func (n Name) Encode(dst []byte) []byte {
 // String 字面量字符串对象 (…)。定界符、控制字符与非 ASCII 字节自动转义。
 type String []byte
 
-// Str 由 Go 字符串构造字面量字符串对象。
+// 由 Go 字符串构造字面量字符串对象。
 func Str(s string) String { return String(s) }
 
 // TextStr 按 PDF 文本字符串规范（ISO 32000-1 §7.9.2）编码：
@@ -108,6 +113,7 @@ func TextStr(s string) Object {
 	return HexString(buf)
 }
 
+// 实现 Object 接口：将字面量字符串（含转义）序列化追加到 dst。
 func (s String) Encode(dst []byte) []byte {
 	dst = append(dst, '(')
 	for _, c := range s {
@@ -138,6 +144,7 @@ func (s String) Encode(dst []byte) []byte {
 // HexString 十六进制字符串对象 <…>。
 type HexString []byte
 
+// 实现 Object 接口：将十六进制字符串序列化追加到 dst。
 func (s HexString) Encode(dst []byte) []byte {
 	dst = append(dst, '<')
 	for _, c := range s {
@@ -151,6 +158,7 @@ func (s HexString) Encode(dst []byte) []byte {
 // Array 数组对象 […]。
 type Array []Object
 
+// 实现 Object 接口：将数组序列化追加到 dst；nil 元素输出为 null。
 func (a Array) Encode(dst []byte) []byte {
 	dst = append(dst, '[')
 	for i, o := range a {
@@ -165,7 +173,7 @@ func (a Array) Encode(dst []byte) []byte {
 	return append(dst, ']')
 }
 
-// Rect 构造矩形数组 [x0 y0 x1 y1]。
+// 构造矩形数组 [x0 y0 x1 y1]。
 func Rect(x0, y0, x1, y1 float64) Array {
 	return Array{Real(x0), Real(y0), Real(x1), Real(y1)}
 }
@@ -178,10 +186,10 @@ type Dict struct {
 	vals []Object
 }
 
-// NewDict 创建空字典。
+// 创建空字典。
 func NewDict() *Dict { return &Dict{} }
 
-// Set 设置键值；键已存在则替换值并保持原位。返回 d 以支持链式调用。
+// 设置键值；键已存在则替换值并保持原位。返回 d 以支持链式调用。
 func (d *Dict) Set(key string, v Object) *Dict {
 	for i, k := range d.keys {
 		if k == key {
@@ -194,7 +202,7 @@ func (d *Dict) Set(key string, v Object) *Dict {
 	return d
 }
 
-// Get 读取键对应的值。
+// 读取键对应的值。
 func (d *Dict) Get(key string) (Object, bool) {
 	for i, k := range d.keys {
 		if k == key {
@@ -204,7 +212,7 @@ func (d *Dict) Get(key string) (Object, bool) {
 	return nil, false
 }
 
-// Delete 删除键。
+// 删除键。
 func (d *Dict) Delete(key string) {
 	for i, k := range d.keys {
 		if k == key {
@@ -215,16 +223,17 @@ func (d *Dict) Delete(key string) {
 	}
 }
 
-// Len 返回字典中键的数量。
+// 返回字典中键的数量。
 func (d *Dict) Len() int { return len(d.keys) }
 
-// Keys 按插入顺序返回全部键。
+// 按插入顺序返回全部键。
 func (d *Dict) Keys() []string {
 	out := make([]string, len(d.keys))
 	copy(out, d.keys)
 	return out
 }
 
+// 实现 Object 接口：将字典按插入顺序序列化追加到 dst。
 func (d *Dict) Encode(dst []byte) []byte {
 	dst = append(dst, "<<"...)
 	for i, k := range d.keys {
@@ -244,11 +253,12 @@ type Stream struct {
 	Data []byte
 }
 
-// NewStream 以给定数据创建流对象。
+// 以给定数据创建流对象。
 func NewStream(data []byte) *Stream {
 	return &Stream{Dict: NewDict(), Data: data}
 }
 
+// 实现 Object 接口：将流（字典 + stream/endstream 数据）序列化追加到 dst。
 func (s *Stream) Encode(dst []byte) []byte {
 	s.Dict.Set("Length", Int(len(s.Data)))
 	dst = s.Dict.Encode(dst)
@@ -265,6 +275,7 @@ type Ref struct {
 	Gen int
 }
 
+// 实现 Object 接口：将间接引用（N G R）序列化追加到 dst。
 func (r Ref) Encode(dst []byte) []byte {
 	dst = strconv.AppendInt(dst, int64(r.Num), 10)
 	dst = append(dst, ' ')
@@ -276,4 +287,5 @@ func (r Ref) Encode(dst []byte) []byte {
 // 用于数字签名占位符等需要精确控制字节布局的场景，慎用。
 type Raw string
 
+// 实现 Object 接口：将原始字节原样追加到 dst。
 func (r Raw) Encode(dst []byte) []byte { return append(dst, string(r)...) }

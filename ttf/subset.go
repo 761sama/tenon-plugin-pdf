@@ -196,7 +196,7 @@ func buildCmap(glyphs []GlyphMapping, newGidOf map[uint16]int) ([]byte, error) {
 	return out, nil
 }
 
-// buildCmap12Sub 生成 format 12 子表：连续码点且新 gid 连续的合并为一组。
+// 生成 format 12 子表：连续码点且新 gid 连续的合并为一组。
 func buildCmap12Sub(glyphs []GlyphMapping, newGidOf map[uint16]int) []byte {
 	type mapping struct {
 		cp  rune
@@ -234,7 +234,7 @@ func buildCmap12Sub(glyphs []GlyphMapping, newGidOf map[uint16]int) []byte {
 	return sub
 }
 
-// buildCmap4Sub 生成 format 4 子表（连续码点分段 + glyphIdArray）。
+// 生成 format 4 子表（连续码点分段 + glyphIdArray）。
 func buildCmap4Sub(glyphs []GlyphMapping, newGidOf map[uint16]int) ([]byte, error) {
 	type mapping struct {
 		cp  uint16
@@ -311,7 +311,7 @@ func buildCmap4Sub(glyphs []GlyphMapping, newGidOf map[uint16]int) ([]byte, erro
 	return sub, nil
 }
 
-// assemble 组装完整字体文件，计算表校验和与 head.checkSumAdjustment。
+// 组装完整字体文件，计算表校验和与 head.checkSumAdjustment。
 func assemble(tables map[string][]byte) ([]byte, error) {
 	tags := make([]string, 0, len(tables))
 	for tag := range tables {
@@ -363,7 +363,7 @@ func assemble(tables map[string][]byte) ([]byte, error) {
 	return out, nil
 }
 
-// tableChecksum 计算表（或整个文件）的校验和（大端 uint32 累加，尾部补零到 4 字节）。
+// 计算表（或整个文件）的校验和（大端 uint32 累加，尾部补零到 4 字节）。
 func tableChecksum(data []byte) uint32 {
 	var sum uint32
 	for i := 0; i < len(data); i += 4 {

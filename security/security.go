@@ -58,7 +58,7 @@ type Handler struct {
 	aes256 bool
 }
 
-// NewHandler 创建安全处理器。fileID 为文档 ID[0]（16 字节）。
+// 创建安全处理器。fileID 为文档 ID[0]（16 字节）。
 func NewHandler(opts Options, fileID []byte) (*Handler, error) {
 	if len(fileID) != 16 {
 		return nil, fmt.Errorf("security: 文件 ID 必须为 16 字节")
@@ -80,15 +80,15 @@ func NewHandler(opts Options, fileID []byte) (*Handler, error) {
 	return h, nil
 }
 
-// Dict 返回 Encrypt 字典（该字典自身不加密）。
+// 返回 Encrypt 字典（该字典自身不加密）。
 func (h *Handler) Dict() *object.Dict { return h.dict }
 
-// pValue 计算 /P 值：bit 1-2 为 0，bit 3-12 按权限，bit 13-32 置 1。
+// 计算 /P 值：bit 1-2 为 0，bit 3-12 按权限，bit 13-32 置 1。
 func (h *Handler) pValue() int32 {
 	return int32(uint32(h.opts.Permissions) | 0xFFFFF000)
 }
 
-// EncryptObject 实现 writer.Encryptor：递归加密对象中的字符串与流。
+// 实现 writer.Encryptor：递归加密对象中的字符串与流。
 func (h *Handler) EncryptObject(num int, obj object.Object) object.Object {
 	switch v := obj.(type) {
 	case object.String:
@@ -124,11 +124,12 @@ func (h *Handler) EncryptObject(num int, obj object.Object) object.Object {
 	}
 }
 
-// encryptBytes 加密字符串字节，输出为十六进制字符串对象。
+// 加密字符串字节，输出为十六进制字符串对象。
 func (h *Handler) encryptBytes(num int, data []byte) object.Object {
 	return object.HexString(h.crypt(num, data))
 }
 
+// 生成 n 字节密码学随机数。
 func randomBytes(n int) []byte {
 	b := make([]byte, n)
 	rand.Read(b)

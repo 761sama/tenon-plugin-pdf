@@ -54,6 +54,7 @@ func hashR6(password, salt, udata []byte) []byte {
 	return k[:32]
 }
 
+// 拼接多个字节切片。
 func concat(parts ...[]byte) []byte {
 	n := 0
 	for _, p := range parts {
@@ -66,7 +67,7 @@ func concat(parts ...[]byte) []byte {
 	return out
 }
 
-// aes256NoPad AES-256-CBC，零 IV、无填充（用于 UE/OE/Perms）。
+// AES-256-CBC，零 IV、无填充（用于 UE/OE/Perms）。
 func aes256NoPad(key, data []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	out := make([]byte, len(data))
@@ -74,7 +75,7 @@ func aes256NoPad(key, data []byte) []byte {
 	return out
 }
 
-// initR6 计算 R6 的 O/U/OE/UE/Perms 与 256 位文件密钥。
+// 计算 R6 的 O/U/OE/UE/Perms 与 256 位文件密钥。
 func (h *Handler) initR6(fileID []byte) error {
 	pw := []byte(h.opts.UserPassword)
 	if len(pw) > 127 {

@@ -25,12 +25,13 @@ type Info struct {
 	ModDate      time.Time
 }
 
-// Empty 返回信息是否全为空。
+// 返回信息是否全为空。
 func (i *Info) Empty() bool {
 	return i.Title == "" && i.Author == "" && i.Subject == "" && i.Keywords == "" &&
 		i.Creator == "" && i.CreationDate.IsZero() && i.ModDate.IsZero()
 }
 
+// 返回生成器标识，未设置时使用默认值 Producer。
 func (i *Info) producer() string {
 	if i.Producer != "" {
 		return i.Producer
@@ -38,7 +39,7 @@ func (i *Info) producer() string {
 	return Producer
 }
 
-// pdfDate 格式化为 PDF 日期字符串 D:YYYYMMDDHHmmSS+HH'mm'。
+// 格式化为 PDF 日期字符串 D:YYYYMMDDHHmmSS+HH'mm'。
 func pdfDate(t time.Time) string {
 	_, off := t.Zone()
 	sign := "+"
@@ -49,10 +50,10 @@ func pdfDate(t time.Time) string {
 	return fmt.Sprintf("%s%s%02d'%02d'", t.Format("D:20060102150405"), sign, off/3600, off%3600/60)
 }
 
-// FormatDate 导出 PDF 日期格式化（供签名等模块使用）。
+// 导出 PDF 日期格式化（供签名等模块使用）。
 func FormatDate(t time.Time) string { return pdfDate(t) }
 
-// Dict 生成文档信息字典。
+// 生成文档信息字典。
 func (i *Info) Dict() *object.Dict {
 	d := object.NewDict()
 	if i.Title != "" {
@@ -80,7 +81,7 @@ func (i *Info) Dict() *object.Dict {
 	return d
 }
 
-// XMP 生成 XMP 元数据包内容。
+// 生成 XMP 元数据包内容。
 func (i *Info) XMP() []byte {
 	esc := func(s string) string {
 		r := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;")

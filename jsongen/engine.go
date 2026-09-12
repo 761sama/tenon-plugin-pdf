@@ -29,10 +29,16 @@ type engine struct {
 	pendingAfter float64
 }
 
-func (e *engine) left() float64     { return e.margins[3] }
-func (e *engine) bottom() float64   { return e.margins[2] }
+// 返回内容区左缘 x 坐标。
+func (e *engine) left() float64 { return e.margins[3] }
+
+// 返回内容区下边界 y 坐标。
+func (e *engine) bottom() float64 { return e.margins[2] }
+
+// 返回内容区宽度。
 func (e *engine) contentW() float64 { return e.size.W - e.margins[3] - e.margins[1] }
 
+// 新建一页并把排版游标重置到页首。
 func (e *engine) addPage() {
 	e.p = e.doc.AddPage(e.size)
 	e.y = e.size.H - e.margins[0]
@@ -57,7 +63,7 @@ type style struct {
 	strike      bool
 }
 
-// resolveStyle 解析样式：默认值 ← 命名样式 ← 内联覆盖。
+// 解析样式：默认值 ← 命名样式 ← 内联覆盖。
 func (e *engine) resolveStyle(name string, ov *styleOverride) (style, error) {
 	st := style{size: 12, align: text.AlignLeft, lineHeight: 1.5}
 	fontID := ""
@@ -136,6 +142,7 @@ func (e *engine) resolveStyle(name string, ov *styleOverride) (style, error) {
 	return st, nil
 }
 
+// 返回 v；v 为零值时返回默认值 def。
 func or(v, def float64) float64 {
 	if v != 0 {
 		return v
@@ -156,6 +163,7 @@ type token struct {
 	newline bool
 }
 
+// 报告 token 是否为实际文字（非空格、非换行）。
 func (t token) word() bool { return !t.space && !t.newline }
 
 // tokenize 切分文本为 token 序列。拉丁字母/数字/西文标点（U+2E80 以下）
@@ -208,6 +216,7 @@ type wrapper struct {
 	lines    []line
 }
 
+// 返回当前行可用宽度（首行扣除缩进）。
 func (w *wrapper) avail() float64 {
 	if w.n == 0 {
 		return w.maxWidth - w.indent
@@ -215,6 +224,7 @@ func (w *wrapper) avail() float64 {
 	return w.maxWidth
 }
 
+// 结束当前行：去掉行尾空格后存入行序列；hard 标记显式换行。
 func (w *wrapper) flush(hard bool) {
 	// 去掉行尾空格
 	for len(w.cur) > 0 && w.cur[len(w.cur)-1].space {
@@ -226,6 +236,7 @@ func (w *wrapper) flush(hard bool) {
 	w.n++
 }
 
+// 向当前行放入一个 token，必要时断行（超宽词按 rune 硬拆）。
 func (w *wrapper) push(tk token) {
 	switch {
 	case tk.newline:
@@ -268,7 +279,7 @@ func (w *wrapper) push(tk token) {
 	}
 }
 
-// splitToken 切出恰好不超过 maxW 的 rune 前缀。
+// 切出恰好不超过 maxW 的 rune 前缀。
 func splitToken(tk token, maxW float64) (head, rest token) {
 	w := 0.0
 	for i, r := range tk.text {
@@ -282,7 +293,7 @@ func splitToken(tk token, maxW float64) (head, rest token) {
 	return tk, token{st: tk.st}
 }
 
-// wrapTokens 将 token 序列贪心换行为行序列。
+// 将 token 序列贪心换行为行序列。
 func wrapTokens(toks []token, maxWidth, firstIndent float64) []line {
 	w := &wrapper{maxWidth: maxWidth, indent: firstIndent}
 	for _, tk := range toks {
@@ -294,7 +305,7 @@ func wrapTokens(toks []token, maxWidth, firstIndent float64) []line {
 	return w.lines
 }
 
-// paragraph 排版段落块。
+// 排版段落块。
 func (e *engine) paragraph(b *blockSpec) error {
 	lines, st, err := e.prepareParagraph(b, e.contentW())
 	if err != nil {
@@ -331,7 +342,7 @@ func (e *engine) paragraph(b *blockSpec) error {
 	return nil
 }
 
-// prepareParagraph 解析样式并换行；空段落返回 nil 行。
+// 解析样式并换行；空段落返回 nil 行。
 func (e *engine) prepareParagraph(b *blockSpec, width float64) ([]line, style, error) {
 	st, err := e.resolveStyle(b.Style, &b.styleOverride)
 	if err != nil {
@@ -358,6 +369,7 @@ func (e *engine) prepareParagraph(b *blockSpec, width float64) ([]line, style, e
 	return wrapTokens(toks, width, st.indent*st.size), st, nil
 }
 
+// 返回两数中较大者。
 func maxFloat(a, b float64) float64 {
 	if a > b {
 		return a
@@ -365,6 +377,7 @@ func maxFloat(a, b float64) float64 {
 	return b
 }
 
+// 返回 a；a 为空串时返回 b。
 func first(a, b string) string {
 	if a != "" {
 		return a
@@ -372,6 +385,7 @@ func first(a, b string) string {
 	return b
 }
 
+// 返回行内最大字号（含段落默认字号）。
 func maxSize(ln line, st style) float64 {
 	m := st.size
 	for _, tk := range ln.toks {
@@ -382,7 +396,7 @@ func maxSize(ln line, st style) float64 {
 	return m
 }
 
-// textHeight 行内文字实际高度（最大 ascent + |descent|）。
+// 行内文字实际高度（最大 ascent + |descent|）。
 func textHeight(ln line, st style) float64 {
 	h := st.font.Ascent(st.size) - st.font.Descent(st.size)
 	for _, tk := range ln.toks {
@@ -458,6 +472,7 @@ func (e *engine) drawLine(ln line, st style, baseX, width float64, firstLine, ju
 	}
 }
 
+// 报告两个 token 样式是否一致（一致时可合并为一段绘制）。
 func sameStyle(a, b token) bool {
 	return a.st.font == b.st.font && a.st.size == b.st.size &&
 		a.st.colr == b.st.colr && a.st.underline == b.st.underline &&
@@ -467,6 +482,7 @@ func sameStyle(a, b token) bool {
 // ---------------------------------------------------------------------------
 // 其他内容块
 
+// 排版垂直间隔块：并入前段段后距，页首的间隔被折叠。
 func (e *engine) spacer(h float64) {
 	if h <= 0 || e.atTop {
 		return // 页首的间隔被折叠掉
@@ -590,6 +606,7 @@ func (e *engine) columns(b *blockSpec) error {
 	return nil
 }
 
+// 排版表格块：解析列、单元格与表头样式后委托 table 包绘制并自动分页。
 func (e *engine) table(b *blockSpec) error {
 	if len(b.Columns) == 0 {
 		return fmt.Errorf("表格缺少列定义")

@@ -15,6 +15,7 @@ import (
 
 const version = "0.1.0"
 
+// 打印全部子命令用法到标准错误并以退出码 2 结束。
 func usage() {
 	fmt.Fprintf(os.Stderr, `tenon-pdf %s — PDF 生成工具（gopkg.761sama.com/tenon-plugin-pdf）
 
@@ -49,6 +50,7 @@ func usage() {
 	os.Exit(2)
 }
 
+// 解析子命令并分发到对应 cmd* 函数；出错时打印到标准错误并以退出码 1 结束。
 func main() {
 	if len(os.Args) < 2 {
 		usage()

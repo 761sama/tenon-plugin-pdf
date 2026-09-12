@@ -12,7 +12,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/sign"
 )
 
-// cmdEncrypt 生成加密演示 PDF。
+// 生成加密演示 PDF。
 func cmdEncrypt(args []string) error {
 	fs := flag.NewFlagSet("encrypt", flag.ExitOnError)
 	out := fs.String("o", "encrypted-demo.pdf", "输出文件")

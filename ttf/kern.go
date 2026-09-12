@@ -11,7 +11,7 @@ package ttf
 // 解析复杂度高出数倍；多数常见字体（DejaVu/Liberation/Lato/思源等）
 // 仍带 kern 表，覆盖面足够。
 
-// parseKern 解析 kern 表；无表或无支持的子表时 kernPairs 为 nil。
+// 解析 kern 表；无表或无支持的子表时 kernPairs 为 nil。
 func (f *Font) parseKern() {
 	d, err := f.table("kern")
 	if err != nil || len(d) < 4 {
@@ -28,7 +28,7 @@ func (f *Font) parseKern() {
 	}
 }
 
-// parseKernSubtables 遍历子表，仅收取 format 0 的横排（非 cross-stream）子表。
+// 遍历子表，仅收取 format 0 的横排（非 cross-stream）子表。
 func (f *Font) parseKernSubtables(d []byte, start, nTables int, apple bool) {
 	p := start
 	for i := 0; i < nTables && p < len(d); i++ {
@@ -63,7 +63,7 @@ func (f *Font) parseKernSubtables(d []byte, start, nTables int, apple bool) {
 	}
 }
 
-// parseKernFormat0 读取 format 0 子表（nPairs 起）的字距对。
+// 读取 format 0 子表（nPairs 起）的字距对。
 func (f *Font) parseKernFormat0(d []byte) {
 	if len(d) < 8 {
 		return
@@ -92,5 +92,5 @@ func (f *Font) Kern(left, right uint16) int {
 	return int(f.kernPairs[uint32(left)<<16|uint32(right)])
 }
 
-// HasKerning 报告字体是否带可用的 kern 字距表。
+// 报告字体是否带可用的 kern 字距表。
 func (f *Font) HasKerning() bool { return len(f.kernPairs) > 0 }

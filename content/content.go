@@ -16,22 +16,24 @@ type Builder struct {
 	buf []byte
 }
 
-// New 创建构建器。
+// 创建构建器。
 func New() *Builder { return &Builder{} }
 
-// Bytes 返回已生成的内容流字节。
+// 返回已生成的内容流字节。
 func (b *Builder) Bytes() []byte { return b.buf }
 
-// Len 返回已生成内容的长度。
+// 返回已生成内容的长度。
 func (b *Builder) Len() int { return len(b.buf) }
 
-// Reset 清空构建器。
+// 清空构建器。
 func (b *Builder) Reset() { b.buf = b.buf[:0] }
 
+// 将浮点操作数追加到内容流。
 func (b *Builder) num(f float64) {
 	b.buf = strconv.AppendFloat(b.buf, f, 'f', -1, 64)
 }
 
+// 将操作符追加到内容流并换行，返回 b 以支持链式调用。
 func (b *Builder) op(s string) *Builder {
 	// 仅在需要与前一个操作数分隔时补空格
 	if n := len(b.buf); n > 0 {
@@ -44,7 +46,7 @@ func (b *Builder) op(s string) *Builder {
 	return b
 }
 
-// Raw 追加原始操作数与操作符行（转义出口）。
+// 追加原始操作数与操作符行（转义出口）。
 func (b *Builder) Raw(s string) {
 	b.buf = append(b.buf, s...)
 	b.buf = append(b.buf, '\n')
@@ -52,13 +54,13 @@ func (b *Builder) Raw(s string) {
 
 // --- 图形状态（§8.4） ---
 
-// SaveState 保存图形状态（q）。
+// 保存图形状态（q）。
 func (b *Builder) SaveState() *Builder { b.op("q"); return b }
 
-// RestoreState 恢复图形状态（Q）。
+// 恢复图形状态（Q）。
 func (b *Builder) RestoreState() *Builder { b.op("Q"); return b }
 
-// Transform 左乘变换矩阵（cm）。
+// 左乘变换矩阵（cm）。
 func (b *Builder) Transform(a, bb, c, d, e, f float64) *Builder {
 	b.num(a)
 	b.buf = append(b.buf, ' ')
@@ -74,20 +76,20 @@ func (b *Builder) Transform(a, bb, c, d, e, f float64) *Builder {
 	return b.op("cm")
 }
 
-// Translate 平移坐标系。
+// 平移坐标系。
 func (b *Builder) Translate(x, y float64) *Builder { return b.Transform(1, 0, 0, 1, x, y) }
 
-// Scale 缩放坐标系。
+// 缩放坐标系。
 func (b *Builder) Scale(sx, sy float64) *Builder { return b.Transform(sx, 0, 0, sy, 0, 0) }
 
-// Rotate 绕原点旋转坐标系（角度制）。
+// 绕原点旋转坐标系（角度制）。
 func (b *Builder) Rotate(deg float64) *Builder {
 	r := deg * 0.017453292519943295
 	sin, cos := sinCos(r)
 	return b.Transform(cos, sin, -sin, cos, 0, 0)
 }
 
-// LineWidth 设置线宽（w）。
+// 设置线宽（w）。
 func (b *Builder) LineWidth(w float64) *Builder { b.num(w); return b.op("w") }
 
 // LineCap 线帽样式。
@@ -99,7 +101,7 @@ const (
 	CapSquare LineCap = 2 // 方头
 )
 
-// SetLineCap 设置线帽（J）。
+// 设置线帽（J）。
 func (b *Builder) SetLineCap(c LineCap) *Builder { b.num(float64(c)); return b.op("J") }
 
 // LineJoin 连接样式。
@@ -111,10 +113,10 @@ const (
 	JoinBevel LineJoin = 2 // 斜接
 )
 
-// SetLineJoin 设置连接样式（j）。
+// 设置连接样式（j）。
 func (b *Builder) SetLineJoin(j LineJoin) *Builder { b.num(float64(j)); return b.op("j") }
 
-// MiterLimit 设置尖接限制（M）。
+// 设置尖接限制（M）。
 func (b *Builder) MiterLimit(m float64) *Builder { b.num(m); return b.op("M") }
 
 // Dash 设置虚线样式（d）：pattern 为虚实长度序列，phase 为相位。
@@ -132,7 +134,7 @@ func (b *Builder) Dash(pattern []float64, phase float64) *Builder {
 	return b.op("d")
 }
 
-// SetExtGState 应用扩展图形状态资源（gs），如透明度。
+// 应用扩展图形状态资源（gs），如透明度。
 func (b *Builder) SetExtGState(name string) *Builder {
 	b.buf = object.Name(name).Encode(b.buf)
 	return b.op("gs")
@@ -140,13 +142,13 @@ func (b *Builder) SetExtGState(name string) *Builder {
 
 // --- 颜色（§8.6） ---
 
-// SetFillColor 设置填充颜色（g / rg / k）。
+// 设置填充颜色（g / rg / k）。
 func (b *Builder) SetFillColor(c color.Color) *Builder {
 	b.buf = append(b.buf, c.Operands()...)
 	return b.op(c.FillOp())
 }
 
-// SetStrokeColor 设置描边颜色（G / RG / K）。
+// 设置描边颜色（G / RG / K）。
 func (b *Builder) SetStrokeColor(c color.Color) *Builder {
 	b.buf = append(b.buf, c.Operands()...)
 	return b.op(c.StrokeOp())
@@ -154,7 +156,7 @@ func (b *Builder) SetStrokeColor(c color.Color) *Builder {
 
 // --- 路径构造（§8.5.2） ---
 
-// MoveTo 移动当前点（m）。
+// 移动当前点（m）。
 func (b *Builder) MoveTo(x, y float64) *Builder {
 	b.num(x)
 	b.buf = append(b.buf, ' ')
@@ -162,7 +164,7 @@ func (b *Builder) MoveTo(x, y float64) *Builder {
 	return b.op("m")
 }
 
-// LineTo 连线（l）。
+// 连线（l）。
 func (b *Builder) LineTo(x, y float64) *Builder {
 	b.num(x)
 	b.buf = append(b.buf, ' ')
@@ -170,7 +172,7 @@ func (b *Builder) LineTo(x, y float64) *Builder {
 	return b.op("l")
 }
 
-// CurveTo 三次贝塞尔曲线（c）：两个控制点 + 终点。
+// 三次贝塞尔曲线（c）：两个控制点 + 终点。
 func (b *Builder) CurveTo(x1, y1, x2, y2, x3, y3 float64) *Builder {
 	b.num(x1)
 	b.buf = append(b.buf, ' ')
@@ -186,7 +188,7 @@ func (b *Builder) CurveTo(x1, y1, x2, y2, x3, y3 float64) *Builder {
 	return b.op("c")
 }
 
-// CurveToV 首控制点与当前点重合的贝塞尔曲线（v）。
+// 首控制点与当前点重合的贝塞尔曲线（v）。
 func (b *Builder) CurveToV(x2, y2, x3, y3 float64) *Builder {
 	b.num(x2)
 	b.buf = append(b.buf, ' ')
@@ -198,7 +200,7 @@ func (b *Builder) CurveToV(x2, y2, x3, y3 float64) *Builder {
 	return b.op("v")
 }
 
-// CurveToY 末控制点与终点重合的贝塞尔曲线（y）。
+// 末控制点与终点重合的贝塞尔曲线（y）。
 func (b *Builder) CurveToY(x1, y1, x3, y3 float64) *Builder {
 	b.num(x1)
 	b.buf = append(b.buf, ' ')
@@ -210,7 +212,7 @@ func (b *Builder) CurveToY(x1, y1, x3, y3 float64) *Builder {
 	return b.op("y")
 }
 
-// Rect 矩形路径（re）。
+// 矩形路径（re）。
 func (b *Builder) Rect(x, y, w, h float64) *Builder {
 	b.num(x)
 	b.buf = append(b.buf, ' ')
@@ -222,42 +224,42 @@ func (b *Builder) Rect(x, y, w, h float64) *Builder {
 	return b.op("re")
 }
 
-// ClosePath 闭合路径（h）。
+// 闭合路径（h）。
 func (b *Builder) ClosePath() *Builder { b.op("h"); return b }
 
 // --- 路径绘制（§8.5.3） ---
 
-// Stroke 描边（S）。
+// 描边（S）。
 func (b *Builder) Stroke() *Builder { b.op("S"); return b }
 
-// CloseAndStroke 闭合并描边（s）。
+// 闭合并描边（s）。
 func (b *Builder) CloseAndStroke() *Builder { b.op("s"); return b }
 
-// Fill 非零环绕填充（f）。
+// 非零环绕填充（f）。
 func (b *Builder) Fill() *Builder { b.op("f"); return b }
 
-// FillEvenOdd 奇偶规则填充（f*）。
+// 奇偶规则填充（f*）。
 func (b *Builder) FillEvenOdd() *Builder { b.op("f*"); return b }
 
-// FillStroke 填充并描边（B）。
+// 填充并描边（B）。
 func (b *Builder) FillStroke() *Builder { b.op("B"); return b }
 
-// FillStrokeEvenOdd 奇偶填充并描边（B*）。
+// 奇偶填充并描边（B*）。
 func (b *Builder) FillStrokeEvenOdd() *Builder { b.op("B*"); return b }
 
-// CloseFillStroke 闭合、填充并描边（b）。
+// 闭合、填充并描边（b）。
 func (b *Builder) CloseFillStroke() *Builder { b.op("b"); return b }
 
-// EndPath 结束路径但不绘制（n），用于裁剪后清除路径。
+// 结束路径但不绘制（n），用于裁剪后清除路径。
 func (b *Builder) EndPath() *Builder { b.op("n"); return b }
 
-// Clip 以当前路径（非零规则）裁剪（W），路径保留需配合后续操作符。
+// 以当前路径（非零规则）裁剪（W），路径保留需配合后续操作符。
 func (b *Builder) Clip() *Builder { b.op("W"); return b }
 
-// ClipEvenOdd 奇偶规则裁剪（W*）。
+// 奇偶规则裁剪（W*）。
 func (b *Builder) ClipEvenOdd() *Builder { b.op("W*"); return b }
 
-// PaintShading 以渐变资源填充当前裁剪区域（sh）。
+// 以渐变资源填充当前裁剪区域（sh）。
 func (b *Builder) PaintShading(name string) *Builder {
 	b.buf = object.Name(name).Encode(b.buf)
 	return b.op("sh")
@@ -265,26 +267,26 @@ func (b *Builder) PaintShading(name string) *Builder {
 
 // --- XObject（§8.8） ---
 
-// DrawXObject 调用具名 XObject（Do），通常为图像或表单。
+// 调用具名 XObject（Do），通常为图像或表单。
 func (b *Builder) DrawXObject(name string) *Builder {
 	b.buf = object.Name(name).Encode(b.buf)
 	return b.op("Do")
 }
 
-// DrawImage 在指定位置以指定尺寸绘制图像 XObject（自动包裹 q/cm/Do/Q）。
+// 在指定位置以指定尺寸绘制图像 XObject（自动包裹 q/cm/Do/Q）。
 func (b *Builder) DrawImage(name string, x, y, w, h float64) *Builder {
 	return b.SaveState().Transform(w, 0, 0, h, x, y).DrawXObject(name).RestoreState()
 }
 
 // --- 文本（§9.4） ---
 
-// BeginText 开始文本对象（BT）。
+// 开始文本对象（BT）。
 func (b *Builder) BeginText() *Builder { b.op("BT"); return b }
 
-// EndText 结束文本对象（ET）。
+// 结束文本对象（ET）。
 func (b *Builder) EndText() *Builder { b.op("ET"); return b }
 
-// SetFont 设置字体资源与字号（Tf）。
+// 设置字体资源与字号（Tf）。
 func (b *Builder) SetFont(resName string, size float64) *Builder {
 	b.buf = object.Name(resName).Encode(b.buf)
 	b.buf = append(b.buf, ' ')
@@ -292,7 +294,7 @@ func (b *Builder) SetFont(resName string, size float64) *Builder {
 	return b.op("Tf")
 }
 
-// TextPosition 移动文本位置（Td）。
+// 移动文本位置（Td）。
 func (b *Builder) TextPosition(tx, ty float64) *Builder {
 	b.num(tx)
 	b.buf = append(b.buf, ' ')
@@ -300,7 +302,7 @@ func (b *Builder) TextPosition(tx, ty float64) *Builder {
 	return b.op("Td")
 }
 
-// TextMatrix 设置文本矩阵（Tm）。
+// 设置文本矩阵（Tm）。
 func (b *Builder) TextMatrix(a, bb, c, d, e, f float64) *Builder {
 	b.num(a)
 	b.buf = append(b.buf, ' ')
@@ -316,22 +318,22 @@ func (b *Builder) TextMatrix(a, bb, c, d, e, f float64) *Builder {
 	return b.op("Tm")
 }
 
-// TextLeading 设置行距（TL）。
+// 设置行距（TL）。
 func (b *Builder) TextLeading(leading float64) *Builder { b.num(leading); return b.op("TL") }
 
-// NextLine 换行（T*）。
+// 换行（T*）。
 func (b *Builder) NextLine() *Builder { b.op("T*"); return b }
 
-// CharSpace 字符间距（Tc）。
+// 字符间距（Tc）。
 func (b *Builder) CharSpace(v float64) *Builder { b.num(v); return b.op("Tc") }
 
-// WordSpace 单词间距（Tw）。
+// 单词间距（Tw）。
 func (b *Builder) WordSpace(v float64) *Builder { b.num(v); return b.op("Tw") }
 
-// HorizontalScaling 水平缩放百分比（Tz）。
+// 水平缩放百分比（Tz）。
 func (b *Builder) HorizontalScaling(v float64) *Builder { b.num(v); return b.op("Tz") }
 
-// TextRise 文本抬升（Ts），用于上下标。
+// 文本抬升（Ts），用于上下标。
 func (b *Builder) TextRise(v float64) *Builder { b.num(v); return b.op("Ts") }
 
 // TextRenderMode 文本渲染模式（Tr）。
@@ -348,13 +350,13 @@ const (
 	TextClip           TextRenderMode = 7 // 仅裁剪
 )
 
-// SetTextRenderMode 设置文本渲染模式（Tr）。
+// 设置文本渲染模式（Tr）。
 func (b *Builder) SetTextRenderMode(m TextRenderMode) *Builder {
 	b.num(float64(m))
 	return b.op("Tr")
 }
 
-// ShowText 显示已编码文本（Tj）。字节须为字体编码后的内容。
+// 显示已编码文本（Tj）。字节须为字体编码后的内容。
 func (b *Builder) ShowText(encoded []byte) *Builder {
 	b.buf = object.String(encoded).Encode(b.buf)
 	return b.op("Tj")
@@ -383,11 +385,11 @@ func (b *Builder) ShowTextAdjusted(segments ...any) *Builder {
 
 // --- 兼容节（§7.8.2 可选） ---
 
-// BeginMarkedContent 开始标记内容（BMC）。
+// 开始标记内容（BMC）。
 func (b *Builder) BeginMarkedContent(tag string) *Builder {
 	b.buf = object.Name(tag).Encode(b.buf)
 	return b.op("BMC")
 }
 
-// EndMarkedContent 结束标记内容（EMC）。
+// 结束标记内容（EMC）。
 func (b *Builder) EndMarkedContent() *Builder { b.op("EMC"); return b }

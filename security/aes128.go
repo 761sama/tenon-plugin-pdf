@@ -20,7 +20,7 @@ var pwPadding = []byte{
 
 const r4KeyLen = 16 // 128 位
 
-// padPassword 按规范填充/截断密码到 32 字节。
+// 按规范填充/截断密码到 32 字节。
 func padPassword(pw string) []byte {
 	p := make([]byte, 32)
 	n := copy(p, pw)
@@ -28,7 +28,7 @@ func padPassword(pw string) []byte {
 	return p
 }
 
-// initR4 计算 R4 的 O/U 值与文件加密密钥。
+// 计算 R4 的 O/U 值与文件加密密钥。
 func (h *Handler) initR4(fileID []byte) {
 	userPad := padPassword(h.opts.UserPassword)
 	ownerPad := padPassword(h.opts.OwnerPassword)
@@ -97,7 +97,7 @@ func (h *Handler) initR4(fileID []byte) {
 	h.dict.Set("StrF", object.Name("StdCF"))
 }
 
-// crypt 加密/解密单个对象内容（R4：派生对象密钥 + AES-128-CBC + 随机 IV）。
+// 加密/解密单个对象内容（R4：派生对象密钥 + AES-128-CBC + 随机 IV）。
 func (h *Handler) crypt(num int, data []byte) []byte {
 	if h.aes256 {
 		return aesCrypt(h.key, data) // R6：直接使用文件密钥
@@ -111,7 +111,7 @@ func (h *Handler) crypt(num int, data []byte) []byte {
 	return aesCrypt(key[:16], data)
 }
 
-// aesCrypt AES-CBC 加密：随机 16 字节 IV 前缀 + PKCS#7 填充。
+// AES-CBC 加密：随机 16 字节 IV 前缀 + PKCS#7 填充。
 func aesCrypt(key, data []byte) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {

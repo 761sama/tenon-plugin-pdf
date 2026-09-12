@@ -12,7 +12,7 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/text"
 )
 
-// cmdTable 生成「合同样式表格」演示 PDF：采购订单，60 行内容，跨页重复表头。
+// 生成「合同样式表格」演示 PDF：采购订单，60 行内容，跨页重复表头。
 func cmdTable(args []string) error {
 	fs := flag.NewFlagSet("table", flag.ExitOnError)
 	out := fs.String("o", "table-demo.pdf", "输出文件")

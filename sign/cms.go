@@ -130,7 +130,7 @@ type parsedCMS struct {
 	timestamp     *timestampInfo // RFC 3161 时间戳（未认证属性，可空）
 }
 
-// parseCMS 解析 detached CMS SignedData。
+// 解析 detached CMS SignedData。
 func parseCMS(der []byte) (*parsedCMS, error) {
 	top, _, err := readTLV(der)
 	if err != nil {
@@ -290,7 +290,7 @@ func parseCMS(der []byte) (*parsedCMS, error) {
 	return out, nil
 }
 
-// verifySignature 用证书公钥校验 CMS 签名。
+// 用证书公钥校验 CMS 签名。
 func (c *parsedCMS) verifySignature() error {
 	// 重建 SET OF 编码（签名输入）
 	set := derT(0x31, c.attrsContent)
