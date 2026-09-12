@@ -5,6 +5,20 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 
 模块路径：`gopkg.761sama.com/tenon-plugin-pdf`（根包名 `pdf`）。
 
+## 项目信息
+
+| 项目 | 内容 |
+|------|------|
+| 项目类型 | 库（同时提供 `tenon-pdf` 命令行工具） |
+| 项目定位 | Go 语言 PDF 生成库：纯标准库实现、零第三方依赖，输出 PDF 1.7 |
+| 主要语言 / 版本 | Go 1.23 |
+| 构建 / 包管理工具 | go build / Go Modules |
+| 测试框架 | go test（含 pdfinfo/pdftotext/pdfsig/openssl 等外部工具交叉验证的集成测试，工具缺失自动跳过） |
+| 测试目录约定 | 测试与源码同目录（`*_test.go`） |
+| 代码注释语言 | 中文 |
+| 提交信息规范 | 统一固定格式，见 dev.md 第 2.4 节 |
+| 特殊约定 | 零第三方依赖（仅标准库）；许可证 MIT |
+
 ## 功能特性
 
 按包划分，每个组件单一职责：
@@ -27,6 +41,7 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 | `table` | 表格：定宽/均分/内容自适应列宽、灰底加粗表头、单元格合并（跨列/跨行，含表头行）、边框内边距、跨页自动重复表头、超高行/跨行块跨页拆分 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）；公钥证书加密（PubSec，多收件人、每收件人独立权限） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、RFC 3161 时间戳、证书链验证、多重签名（增量修订）、第三方既有 PDF 签署、验签、自签名/链式证书 |
+| `jsongen` | JSON 描述 → PDF 文档模板引擎（格式见 `doc/json-format.md`）；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 
 ## 安装与导入
 
@@ -252,6 +267,9 @@ tenon-pdf img  [-o out.pdf] <图片...>                JPEG/PNG/GIF 合成 PDF�
 tenon-pdf table [-o out.pdf] [-rows 120]             合同样式表格演示（跨页重复表头）
 tenon-pdf cjk [-o out.pdf] [-rows 120] [-font 完整字体.ttf|.ttc] [-fontindex 0]
                                                       中文采购单演示（思源黑体子集嵌入）
+tenon-pdf json [-o out.pdf] [-font id=字体.ttf|字体.ttc@序号]... <doc.json>
+                                                      从 JSON 描述生成 PDF（格式见 doc/json-format.md；
+                                                      字体路径仅由命令行注册，JSON 内按 id 引用）
 tenon-pdf encrypt [-o out.pdf] [-user PW] [-owner PW] [-aes256]
               [-no-copy] [-no-print] [-no-modify] [-no-annotate]
               [-recip 收件人证书.pem]...                加密演示（密码或公钥证书 PubSec）
@@ -319,5 +337,5 @@ pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
 
 - `doc/design.md` — 设计文档：架构分层、模块依赖、关键算法权衡与设计决策
 - `doc/usage.md` — 详细使用文档与各子包职责
-- `SUMMARY.md` — 已实现的 PDF 组件/格式/样式完整清单与验证方式
+- `doc/json-format.md` — jsongen 的 JSON 文档描述格式（页面/样式/内容块/字体注册）
 - `dev.md` — 开发规范
