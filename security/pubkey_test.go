@@ -189,10 +189,12 @@ func TestPubKeyOpenSSL(t *testing.T) {
 				t.Fatalf("应有 2 个收件人信封，实际 %d", len(envelopes))
 			}
 
-			// openssl 解开收件人一的信封（收件人顺序即声明顺序）
+			// openssl 解开收件人一的信封（收件人顺序即声明顺序）。
+			// 必须加 -binary：openssl cms 默认按 S/MIME 文本规则把内容中的 0x0A
+			// 规范化为 0x0D 0x0A，seed 含 0x0A 时解出的 seed‖perms 会多一个字节。
 			envPath := filepath.Join(dir, "env0.der")
 			os.WriteFile(envPath, envelopes[0], 0644)
-			plain, err := exec.Command("openssl", "cms", "-decrypt", "-inform", "DER",
+			plain, err := exec.Command("openssl", "cms", "-decrypt", "-binary", "-inform", "DER",
 				"-in", envPath, "-recip", filepath.Join(dir, "r1.cert.pem"),
 				"-inkey", filepath.Join(dir, "r1.key.pem")).CombinedOutput()
 			if err != nil {
