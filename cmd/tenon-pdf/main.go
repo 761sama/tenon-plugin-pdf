@@ -27,10 +27,10 @@ func usage() {
       -pagesize A4|A5|Letter               页面尺寸
   tenon-pdf img  [-o out.pdf] <图片...>   每张图片一页（JPEG/PNG/GIF）
   tenon-pdf table [-o out.pdf] [-rows 60] 合同样式表格演示（跨页重复表头）
-  tenon-pdf cjk [-o out.pdf] [-rows 120] [-font 完整字体.ttf]
+  tenon-pdf cjk [-o out.pdf] [-rows 120] [-font 完整字体.ttf|.otf|.ttc]
                                          中文采购单演示（思源黑体子集嵌入）
   tenon-pdf json [-o out.pdf] <doc.json> 从 JSON 描述生成 PDF（格式见 doc/json-format.md）
-      -font id=字体.ttf|字体.ttc@序号      注册字体（可重复；JSON 仅按 id 引用，禁止路径）
+      -font id=字体.ttf|字体.otf|字体.ttc@序号  注册字体（可重复；JSON 仅按 id 引用，禁止路径）
       -font id=builtin:Helvetica-Bold    注册标准 14 字体
   tenon-pdf encrypt [-o out.pdf] [-user PW] [-owner PW] [-aes256]
                     [-no-copy] [-no-print] [-no-modify] [-no-annotate]

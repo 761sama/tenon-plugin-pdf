@@ -28,8 +28,8 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 | `object` | PDF 对象模型（null/布尔/数值/字符串/名称/数组/字典/流/引用）与序列化 |
 | `writer` | 文件结构：间接对象、交叉引用表、trailer、文件头尾 |
 | `color` | DeviceGray / DeviceRGB / DeviceCMYK 颜色模型 |
-| `font` | 标准 14 字体 + WinAnsi 编码 + 精确字宽表；`CJKFont` 中文嵌入字体（Type0/Identity-H，支持 TTC、连字、字距） |
-| `ttf` | TrueType（glyf）字体与 TTC 集合解析、子集化重建（复合字形闭包、校验和修正）、kern/GSUB liga 读取 |
+| `font` | 标准 14 字体 + WinAnsi 编码 + 精确字宽表；`CJKFont` 中文嵌入字体（Type0/Identity-H，支持 TTF/OTF/TTC、连字、字距） |
+| `ttf` | TrueType（glyf）与 OpenType（CFF）字体及 TTC/OTC 集合解析、子集化重建（glyf 复合字形闭包、校验和修正；CFF 子程序闭包重编号）、kern/GSUB liga 读取 |
 | `content` | 内容流构建器：路径、绘制、裁剪、变换、全部文本操作、XObject |
 | `text` | 文本换行与对齐（左/中/右/两端对齐） |
 | `image` | JPEG 原样嵌入（DCTDecode）、PNG/GIF 解码嵌入（FlateDecode）、SMask 透明蒙版 |
@@ -145,7 +145,9 @@ tbl.AddRowCells(table.C("sub-a"), table.C("sub-b"))
 
 ```go
 f, err := font.LoadCJKFile("NotoSansSC-Regular.ttf") // 任意 glyf 轮廓 TTF
-// TTC 集合（如 simsun.ttc）：
+// OTF（CFF 轮廓，如思源宋体）：
+// f, err := font.LoadCJKFile("SourceHanSerifSC-Regular.otf")
+// TTC/OTC 集合（如 simsun.ttc、SourceHanSerif-Regular.ttc）：
 // f, err := font.LoadCJKCollectionFile("uming.ttc", 0)
 if err != nil {
     panic(err)
@@ -157,9 +159,12 @@ p.DrawText(f, 18, 72, 780, "中文标题") // 与标准 14 字体用法一致
 p.TextBox(f, 11, 72, 750, 450, "中文段落……", text.AlignLeft, 0)
 ```
 
-- 保存文档时自动**子集化嵌入**：仅含实际用到的字形（复合字形自动闭包）
+- 保存文档时自动**子集化嵌入**：仅含实际用到的字形（glyf 复合字形自动闭包；
+  CFF 做子程序闭包重编号）
+- glyf 源嵌入为 CIDFontType2/FontFile2，CFF（OTF）源嵌入为
+  CIDFontType0/FontFile3（/CIDFontType0C），对上层透明
 - 自动生成 **ToUnicode CMap**，pdftotext 可正确反查中文
-- 支持 TTC 集合（`LoadCJKCollection`）；源字体带 kern 表时自动应用字距（TJ 输出），
+- 支持 TTC/OTC 集合（`LoadCJKCollection`）；源字体带 kern 表时自动应用字距（TJ 输出），
   带 GSUB liga/rlig 时自动连字（`f.Ligatures`/`f.Kerning` 可关闭）
 - 缺字形显示为 .notdef 并输出警告；`font.Resource` 接口统一标准字体与 CJK 字体
 
@@ -265,9 +270,9 @@ tenon-pdf text [-o out.pdf] [-font Helvetica|Times-Roman|Courier]
                                                      文本文件 → PDF（自动换行分页）
 tenon-pdf img  [-o out.pdf] <图片...>                JPEG/PNG/GIF 合成 PDF（每张一页）
 tenon-pdf table [-o out.pdf] [-rows 120]             合同样式表格演示（跨页重复表头）
-tenon-pdf cjk [-o out.pdf] [-rows 120] [-font 完整字体.ttf|.ttc] [-fontindex 0]
+tenon-pdf cjk [-o out.pdf] [-rows 120] [-font 完整字体.ttf|.otf|.ttc] [-fontindex 0]
                                                       中文采购单演示（思源黑体子集嵌入）
-tenon-pdf json [-o out.pdf] [-font id=字体.ttf|字体.ttc@序号]... <doc.json>
+tenon-pdf json [-o out.pdf] [-font id=字体.ttf|字体.otf|字体.ttc@序号]... <doc.json>
                                                       从 JSON 描述生成 PDF（格式见 doc/json-format.md；
                                                       字体路径仅由命令行注册，JSON 内按 id 引用）
 tenon-pdf encrypt [-o out.pdf] [-user PW] [-owner PW] [-aes256]
@@ -290,7 +295,7 @@ tenon-pdf version                                    打印版本
 > `cjk` 子命令默认使用内置的思源黑体演示子集字体
 > （`cmd/tenon-pdf/assets/NotoSansSC-Subset.ttf`，OFL 协议，由 `tools/fontsubset`
 > 从完整 Noto Sans SC 生成，字符集见 `assets/charset.txt`）。
-> 需要任意中文文本时请用 `-font` 指定完整字体文件；TTC 集合用 `-fontindex` 选成员。
+> 需要任意中文文本时请用 `-font` 指定完整字体文件（TTF/OTF）；TTC/OTC 集合用 `-fontindex` 选成员。
 
 ## 测试与验证
 
@@ -302,15 +307,25 @@ go run ./cmd/tenon-pdf demo -o build/demo.pdf
 
 集成测试在外部工具可用时自动启用交叉验证：pdfinfo/pdftotext（结构与文本提取）、
 pdfsig 与 openssl cms（签名）、Ghostscript（渲染）。
+OTF/OTC（CFF 轮廓）相关测试经环境变量指定思源宋体字体路径，未设置自动跳过：
+
+```sh
+# PowerShell 示例
+$env:TENONPDF_TEST_HAN_OTF = "路径\SourceHanSerifSC-Regular.otf"
+$env:TENONPDF_TEST_HAN_OTC = "路径\SourceHanSerif-Regular.ttc"
+```
 
 ## 已知限制
 
 - **表格**：合并仅支持矩形区域（ColSpan×RowSpan），超出列数/行数自动截断；
   表头行合并的跨行不越过表头区（自动截断）；表头块本身超过整页时仍溢出绘制；
   自适应列宽按比例压缩时不低于最长单词宽（极端窄表仍可能溢出）
-- **字体**：仅支持 glyf 轮廓的 TrueType 子集嵌入（TTF 及 TTC 集合成员）；
-  OTF/CFF（CIDFontType0）、变量字体实例化（需先用 fonttools 等工具静态化）、
-  竖排（Identity-V）未实现；OpenType 特性仅支持 GSUB liga/rlig 连字，
+- **字体**：支持 glyf 轮廓 TrueType（TTF 及 TTC 集合成员）与 CFF 轮廓
+  OpenType（OTF 及 OTC 集合成员）的子集嵌入；变量字体实例化
+  （需先用 fonttools 等工具静态化）、竖排（Identity-V）未实现；
+  CFF 子集化要求子程序调用号与调用指令同处一个程序块
+  （流通字体均满足，特殊手工构造字体可能报「不支持改写」错误）；
+  OpenType 特性仅支持 GSUB liga/rlig 连字，
   字距仅支持 kern 表（GPOS 型字距未实现），复杂文字 shaping（阿拉伯/印度语系重排）
   超出范围
 - **加密**：不支持 RC4 内容加密（V1–V3，纯遗留）；PubSec 仅支持 RSA 收件人证书；

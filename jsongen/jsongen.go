@@ -41,7 +41,7 @@ func (r *FontRegistry) Register(id string, f font.Resource) error {
 	return nil
 }
 
-// 注册 TTF 字体文件；.ttc 集合取成员 0（需指定成员请用 RegisterCollection）。
+// 注册 TTF/OTF 字体文件；.ttc 集合取成员 0（需指定成员请用 RegisterCollection）。
 func (r *FontRegistry) RegisterFile(id, path string) error {
 	if strings.EqualFold(filepath.Ext(path), ".ttc") {
 		return r.RegisterCollection(id, path, 0)
@@ -53,7 +53,7 @@ func (r *FontRegistry) RegisterFile(id, path string) error {
 	return r.Register(id, f)
 }
 
-// 注册 TTC 集合的成员字体。
+// 注册 TTC/OTC 集合的成员字体。
 func (r *FontRegistry) RegisterCollection(id, path string, index int) error {
 	f, err := font.LoadCJKCollectionFile(path, index)
 	if err != nil {

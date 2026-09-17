@@ -15,8 +15,11 @@
 
 ## 字体
 
-- [ ] 仅支持 glyf 轮廓的 TrueType 子集嵌入（TTF 及 TTC 集合成员）
-- [ ] OTF/CFF（CIDFontType0）未实现
+- [x] ~~仅支持 glyf 轮廓的 TrueType 子集嵌入（TTF 及 TTC 集合成员）~~
+      （已支持 CFF 轮廓：OTF 及 OTC 集合成员，CIDFontType0 + FontFile3/CIDFontType0C
+      嵌入；子程序闭包重编号 + CID 重编号，非 CID 键源自动转 CID 键单 FD）
+  - 剩余边界：CFF 子程序调用号经栈继承自调用方程序块的手工构造字体不支持
+    （流通字体均满足同块条件，遇此情况报明确错误）
 - [ ] 变量字体实例化未实现（需先用 fonttools 等工具静态化）
 - [ ] 竖排（Identity-V）未实现
 - [ ] OpenType 特性仅支持 GSUB liga/rlig 连字

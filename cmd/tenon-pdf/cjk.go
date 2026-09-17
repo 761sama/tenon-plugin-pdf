@@ -25,8 +25,8 @@ func cmdCJK(args []string) error {
 	fs := flag.NewFlagSet("cjk", flag.ExitOnError)
 	out := fs.String("o", "cjk-demo.pdf", "输出文件")
 	rows := fs.Int("rows", 120, "内容行数")
-	fontPath := fs.String("font", "", "完整 TTF/TTC 字体路径（默认使用内置子集字体）")
-	fontIndex := fs.Int("fontindex", 0, "TTC 集合中的字体索引（.ttc 文件时有效）")
+	fontPath := fs.String("font", "", "完整 TTF/OTF/TTC 字体路径（默认使用内置子集字体）")
+	fontIndex := fs.Int("fontindex", 0, "TTC/OTC 集合中的字体索引（.ttc 文件时有效）")
 	fs.Parse(args)
 
 	cjkFont, err := loadCJKFont(*fontPath, *fontIndex)
@@ -123,7 +123,7 @@ func cmdCJK(args []string) error {
 	return doc.SaveFile(*out)
 }
 
-// loadCJKFont 加载 CJK 字体：指定路径则加载完整字体（TTC 集合按 index 取成员），
+// loadCJKFont 加载 CJK 字体：指定路径则加载完整字体（TTC/OTC 集合按 index 取成员），
 // 否则用内置子集字体。
 func loadCJKFont(path string, index int) (*font.CJKFont, error) {
 	var f *font.CJKFont

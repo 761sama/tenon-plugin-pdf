@@ -82,8 +82,8 @@ doc.SaveFile("out.pdf")
 | 方法 | 用途 |
 |---|---|
 | `Register(id, resource)` | 注册已加载的 `font.Resource` |
-| `RegisterFile(id, path)` | 注册 TTF 文件（.ttc 取成员 0；保存时自动子集化嵌入） |
-| `RegisterCollection(id, path, index)` | 注册 TTC 集合成员 |
+| `RegisterFile(id, path)` | 注册 TTF/OTF 文件（.ttc 取成员 0；保存时自动子集化嵌入） |
+| `RegisterCollection(id, path, index)` | 注册 TTC/OTC 集合成员 |
 | `RegisterBuiltin(id, name)` | 注册标准 14 字体：`Helvetica`/`Helvetica-Bold`/`Helvetica-Oblique`/`Helvetica-BoldOblique`、`Times-Roman`/`Times-Bold`/`Times-Italic`/`Times-BoldItalic`、`Courier`/`Courier-Bold`/`Courier-Oblique`/`Courier-BoldOblique`、`Symbol`、`ZapfDingbats`（不嵌入，仅 WinAnsi 字符） |
 
 ## styles — 命名样式
@@ -232,7 +232,7 @@ tenon-pdf json -o out.pdf \
   data/contract.json
 ```
 
-`-font` 可重复：`id=路径`（TTF）、`id=路径@序号`（TTC 成员）、`id=builtin:标准字体名`。
+`-font` 可重复：`id=路径`（TTF/OTF）、`id=路径@序号`（TTC/OTC 成员）、`id=builtin:标准字体名`。
 
 ## 注意事项
 

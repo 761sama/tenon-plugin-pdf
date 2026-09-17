@@ -173,7 +173,7 @@ GPOS 型字距未实现（需完整特性/脚本/定位规则解析，复杂度�
 加载指定成员（如 simsun.ttc）。
 
 **子集化（ttf.Subset）**：保存文档时（`BuildDict`）才做——因为只有此刻才知道
-「实际用到哪些字」。步骤：
+「实际用到哪些字」。glyf 轮廓步骤：
 
 1. **组件闭包**：TrueType 复合字形（如 é = e + ´）引用其他字形，
    必须递归纳入，否则渲染缺笔；
@@ -191,11 +191,34 @@ GPOS 型字距未实现（需完整特性/脚本/定位规则解析，复杂度�
    这是 pdftotext 能反查中文与连字原文的关键——没有它，
    渲染正常但复制/搜索全是乱码。
 
+**CFF 子集化（ttf/cff.go + cffsubset.go + charstring.go）**：OpenType（CFF 轮廓，
+.otf 及 OTC 集合成员）走另一路径，输出重建的独立 CFF，PDF 侧以
+`CIDFontType0` + `FontFile3`（`/CIDFontType0C`）嵌入：
+
+1. **CID 重编号**：字形按 CID 顺序重排，charset 重建为 GID i → CID i
+   （连续区间，单条即可表达），查看器经 charset 反查 CID→GID，
+   与 PDF 的 CID 分配天然对齐（CIDFontType0 无 CIDToGIDMap 概念）；
+2. **子程序闭包**：局部/全局 Subrs 是 CFF 体积大头（思源宋体单 FD 局部
+   Subrs 达 2.6 万条），必须做调用闭包分析，仅保留被引用的子程序并按
+   新编号改写 charstring 中的 callsubr/callgsubr 操作数（偏置随数量变化）。
+   难点在 Type2 charstring 的**执行式解析**：stem 声明可藏在子程序内部，
+   hintmask/cntrmask 的掩码长度取决于调用点累积 stem 数，且操作数栈跨
+   子程序调用连续（子程序可遗留栈值交还调用方）——不模拟执行就无法
+   确定掩码边界与调用目标；
+3. **FD 收敛**：未用到的 FD 整体丢弃，FDSelect 按新字形序重建（format 3
+   区间合并）；Private 字典剔除 Subrs 条目后重编码（思源宋体各 FD 字典
+   集中存放、Subrs 远置，原偏移达数 MB，垫零保偏移会等比膨胀），
+   重建的局部 Subrs INDEX 紧随字典放置；
+4. **非 CID 键源**（普通拉丁 OTF）：转换为单 FD 的 CID 键结构——
+   补 ROS（Adobe-Identity-0）、合成 FDArray/FDSelect，丢弃 Encoding，
+   charset 同样重编号；
+5. 布局迭代：charset/CharStrings/FDArray/FDSelect/Private 各偏移相互影响
+   操作数编码长度，迭代至稳定（2–3 轮收敛）。
+
 **权衡**：
-- 为什么限定 glyf 轮廓 TTF？CFF（OTF）子集化要解析 Type2 charstring 与
-  CID-keyed 结构，复杂度数倍。glyf 的「表复制 + 偏移重建」模型简单可靠。
-  代价：思源黑体官方 OTF、CFF 版 TTC（如 Noto Serif CJK）不能用——
-  glyf 版 TTC（simsun.ttc、uming.ttc）已支持，OTF 可获取对应 TTF 版规避。
+- CFF 子集化为什么不做 desubroutinize（全部内联展开）？内联展开彻底免除
+  子程序重编号，但思源宋体字形高度子程序化（一个汉字几十次调用），
+  展开后体积数倍增；闭包 + 重编号保持共享，子集体积与 glyf 子集同量级。
 - 连字为什么只做 liga/rlig 而不做完整 shaping？拉丁连字是独立替换，
   不涉及重排/上下文分解；阿拉伯/印度语系的正确 shaping 需要完整
   OpenType 管线（ccmp/init/medi/fina/定位），远超本库范围。

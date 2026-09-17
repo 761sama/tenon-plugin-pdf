@@ -34,8 +34,8 @@ err := doc.SaveFile("out.pdf")
 | `object` | PDF 对象模型（null/布尔/数值/字符串/名称/数组/字典/流/引用）与序列化 |
 | `writer` | 文件结构：间接对象、交叉引用表、trailer、文件头尾 |
 | `color` | Gray / RGB / CMYK 颜色模型 |
-| `font` | 标准 14 字体、WinAnsi 编码、宽度度量；CJKFont 嵌入子集字体（Type0/Identity-H，支持 TTC、连字、字距） |
-| `ttf` | TrueType（glyf）与 TTC 集合解析、子集化重建；kern 字距表与 GSUB liga 连字规则读取 |
+| `font` | 标准 14 字体、WinAnsi 编码、宽度度量；CJKFont 嵌入子集字体（Type0/Identity-H，支持 TTF/OTF/TTC、连字、字距） |
+| `ttf` | TrueType（glyf）与 OpenType（CFF）字体及 TTC/OTC 集合解析、子集化重建（CFF 含子程序闭包重编号）；kern 字距表与 GSUB liga 连字规则读取 |
 | `content` | 内容流构建器：路径、绘制、裁剪、变换、文本操作、XObject |
 | `text` | 文本换行与对齐（左/中/右/两端对齐） |
 | `image` | JPEG 原样嵌入、PNG/GIF 解码嵌入、SMask 透明蒙版 |
@@ -92,6 +92,8 @@ tbl.AddRowCells(table.C("sub-a"), table.C("sub-b"))                          // 
 
 ```go
 f, err := font.LoadCJKFile("NotoSansSC-Regular.ttf") // 任意 glyf 轮廓 TTF
+// OTF（CFF 轮廓，如思源宋体）：
+// f, err := font.LoadCJKFile("SourceHanSerifSC-Regular.otf")
 if err != nil { ... }
 f.SetName("NotoSansSC")
 
@@ -102,21 +104,24 @@ tbl := table.New(...)
 tbl.Font = f                                     // 表格同样可用
 ```
 
-TTC 集合（如 simsun.ttc、uming.ttc）：
+TTC/OTC 集合（如 simsun.ttc、uming.ttc、SourceHanSerif-Regular.ttc）：
 
 ```go
 f, err := font.LoadCJKCollectionFile("uming.ttc", 0) // 第 0 个成员字体
 // 或 font.LoadCJKCollection(r, index)
 ```
 
-- 字体在保存文档时自动**子集化**：仅嵌入实际用到的字形（复合字形自动闭包）
+- 字体在保存文档时自动**子集化**：仅嵌入实际用到的字形（复合字形自动闭包；
+  CFF 做子程序闭包重编号）
+- glyf 源嵌入为 CIDFontType2 + FontFile2；CFF（OTF）源嵌入为
+  CIDFontType0 + FontFile3（/CIDFontType0C），对上层完全透明
 - 自动生成 **ToUnicode CMap**，pdftotext 等工具可正确反查中文
 - 文本按 rune 动态分配 CID（2 字节 Identity-H 编码），缺字形显示为 .notdef 并输出警告
 - **连字**：源字体带 GSUB liga/rlig 时自动替换（如 fi/ffi），ToUnicode 保留原文多码点映射，
   复制/搜索结果不变；`f.Ligatures = false` 可关闭
 - **字距**：源字体带 kern 表（format 0）时自动应用，绘制时输出 TJ 调整数组，
   宽度测量同步计入；`f.Kerning = false` 可关闭
-- `font.Resource` 接口统一标准字体与 CJK 字体；任何 glyf TTF/TTC 成员均可加载
+- `font.Resource` 接口统一标准字体与 CJK 字体；任何 TTF/OTF 及 TTC/OTC 成员均可加载
 
 ### 加密（security 包）
 
@@ -304,8 +309,8 @@ tenon-pdf text -font Courier -size 10 -pagesize Letter -o out.pdf in.txt
 tenon-pdf img -o out.pdf a.jpg b.png    # 图片 → PDF（每张一页）
 tenon-pdf table -o table.pdf -rows 120  # 合同样式表格演示（跨页重复表头）
 tenon-pdf cjk -o cjk.pdf                # 中文采购单演示（思源黑体子集嵌入）
-tenon-pdf cjk -font NotoSansSC-Regular.ttf -o cjk.pdf  # 使用完整字体文件
-tenon-pdf cjk -font simsun.ttc -fontindex 0 -o cjk.pdf # 使用 TTC 集合成员
+tenon-pdf cjk -font NotoSansSC-Regular.ttf -o cjk.pdf  # 使用完整字体文件（TTF/OTF）
+tenon-pdf cjk -font simsun.ttc -fontindex 0 -o cjk.pdf # 使用 TTC/OTC 集合成员
 tenon-pdf json -o out.pdf data/contract.json \         # 从 JSON 描述生成 PDF
   -font song=C:\Windows\Fonts\simsun.ttc@0 \           # 注册 TTC 成员字体（id=路径@序号）
   -font hei=C:\Windows\Fonts\simhei.ttf \              # 注册 TTF（id=路径）

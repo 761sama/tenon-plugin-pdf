@@ -1,8 +1,10 @@
-// Package ttf 实现 TrueType 字体文件（glyf 轮廓）的解析与子集化重建。
-// 支持独立 TTF 与 TTC 集合（ParseCollection）。
+// Package ttf 实现 TrueType（glyf 轮廓）与 OpenType（CFF 轮廓，.otf）
+// 字体文件的解析与子集化重建。支持独立字体与 TTC/OTC 集合（ParseCollection）。
 //
-// 子集化输出仅包含指定字形的新字体文件：重建 glyf/loca/hmtx/maxp/cmap/head
-// 等表，丢弃 GSUB/GPOS/GDEF/变体等与本用途无关的表。
+// glyf 字体的子集化输出仅包含指定字形的新字体文件：重建 glyf/loca/hmtx/
+// maxp/cmap/head 等表，丢弃 GSUB/GPOS/GDEF/变体等与本用途无关的表。
+// CFF 字体的子集化输出为重建的独立 CFF（CID 重编号为输出字形序，
+// FDArray/FDSelect/Private/Subrs 同步收敛），供 PDF 以 CIDFontType0C 嵌入。
 // 解析侧额外提供 kern 表（字距）与 GSUB 连字规则（liga/rlig），
 // 供上层排版使用；这些表不进子集产物。
 package ttf
@@ -31,6 +33,8 @@ type Font struct {
 	cmap4  []byte // format 4 子表（可空）
 	cmap12 []byte // format 12 子表（可空）
 
+	isCFF bool // true 表示 CFF 轮廓（OpenType/.otf），无 glyf/loca 表
+
 	kernPairs map[uint32]int16       // kern 字距对（left<<16|right → 修正值，可空）
 	ligatures map[uint16][]Ligature  // GSUB 连字规则（首字形 → 候选，可空）
 
@@ -53,11 +57,12 @@ func parseAt(data []byte, off int) (*Font, error) {
 		return nil, fmt.Errorf("ttf: 文件过短")
 	}
 	sfnt := u32(data, off)
-	if sfnt != 0x00010000 && sfnt != 0x74727565 { // 1.0 或 'true'
-		return nil, fmt.Errorf("ttf: 不支持的字体格式 0x%08x（仅支持 glyf 轮廓的 TrueType）", sfnt)
+	isCFF := sfnt == 0x4F54544F // 'OTTO'：CFF 轮廓的 OpenType
+	if !isCFF && sfnt != 0x00010000 && sfnt != 0x74727565 { // 1.0 或 'true'
+		return nil, fmt.Errorf("ttf: 不支持的字体格式 0x%08x（仅支持 glyf 轮廓的 TrueType 与 CFF 轮廓的 OpenType）", sfnt)
 	}
 	numTables := int(u16(data, off+4))
-	f := &Font{data: data, tables: make(map[string][2]uint32, numTables)}
+	f := &Font{data: data, tables: make(map[string][2]uint32, numTables), isCFF: isCFF}
 	for i := 0; i < numTables; i++ {
 		o := off + 12 + i*16
 		if o+16 > len(data) {
@@ -83,8 +88,10 @@ func parseAt(data []byte, off int) (*Font, error) {
 	if err := f.parseHmtx(); err != nil {
 		return nil, err
 	}
-	if err := f.parseLoca(); err != nil {
-		return nil, err
+	if !f.isCFF { // CFF 字体无 glyf/loca 表
+		if err := f.parseLoca(); err != nil {
+			return nil, err
+		}
 	}
 	if err := f.parseCmap(); err != nil {
 		return nil, err
@@ -323,6 +330,18 @@ func (f *Font) parseName() {
 			f.psName = name
 		}
 	}
+}
+
+// 报告字体是否为 CFF 轮廓（OpenType/.otf 及 OTC 集合成员）。
+// CFF 字体无 glyf/loca 表，子集化走 CFF 重建路径（Subset 内部自动分派）。
+func (f *Font) IsCFF() bool { return f.isCFF }
+
+// 返回 CFF 表（标签 "CFF "）的原始数据；非 CFF 字体报错。
+func (f *Font) cffTable() ([]byte, error) {
+	if !f.isCFF {
+		return nil, fmt.Errorf("ttf: 非 CFF 字体")
+	}
+	return f.table("CFF ")
 }
 
 // 返回字体的 PostScript 名称。

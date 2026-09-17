@@ -14,8 +14,10 @@ import (
 	"gopkg.761sama.com/tenon-plugin-pdf/writer"
 )
 
-// CJKFont 嵌入子集化 TrueType 字体的 CID 字体（Type0 / Identity-H / CIDFontType2），
+// CJKFont 嵌入子集化字体的 CID 字体（Type0 / Identity-H），
 // 用于中文等超出 WinAnsi 范围的文本。实现 Resource 与 Kerned 接口。
+// TrueType（glyf）源嵌入为 CIDFontType2 + FontFile2；
+// OpenType（CFF，.otf 及 OTC 集合）源嵌入为 CIDFontType0 + FontFile3（/CIDFontType0C）。
 //
 // 工作方式：文本绘制时按 rune 序列做 GSUB 连字替换（可选）后动态分配 CID
 // （从 1 起），序列化时（BuildDict）将实际用到的字形子集化嵌入，
@@ -40,8 +42,9 @@ type CJKFont struct {
 	built    *object.Dict
 }
 
-// LoadCJK 从 TrueType 字体文件（glyf 轮廓，如 Noto Sans SC / 思源黑体 TTF 版）加载 CJK 字体。
-// 数据为 TTC 集合时报错，请改用 LoadCJKCollection 指定成员索引。
+// LoadCJK 从字体文件加载 CJK 字体：支持 TrueType（.ttf，glyf 轮廓）
+// 与 OpenType（.otf，CFF 轮廓，如思源宋体）。
+// 数据为 TTC/OTC 集合时报错，请改用 LoadCJKCollection 指定成员索引。
 func LoadCJK(r io.Reader) (*CJKFont, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -68,7 +71,8 @@ func LoadCJKFile(path string) (*CJKFont, error) {
 	return LoadCJK(f)
 }
 
-// 从 TTC 集合加载第 index 个成员字体（0 起），如 simsun.ttc。
+// 从 TTC/OTC 集合加载第 index 个成员字体（0 起），如 simsun.ttc、
+// SourceHanSerif-Regular.ttc（OTC，CFF 轮廓）。
 func LoadCJKCollection(r io.Reader, index int) (*CJKFont, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
@@ -310,8 +314,9 @@ func (f *CJKFont) BuildDict(w *writer.Writer) *object.Dict {
 		// 子集化失败时退化为不嵌入（查看器可能无法显示）
 		subset = nil
 	}
+	isCFF := f.tf.IsCFF()
 
-	// 2. 字体文件流（Flate 压缩 + Length1）
+	// 2. 字体文件流（Flate 压缩；glyf 为 FontFile2 带 Length1，CFF 为 FontFile3 /CIDFontType0C）
 	var fontFileRef object.Object
 	if subset != nil {
 		var buf bytes.Buffer
@@ -320,7 +325,11 @@ func (f *CJKFont) BuildDict(w *writer.Writer) *object.Dict {
 		zw.Close()
 		st := object.NewStream(buf.Bytes())
 		st.Dict.Set("Filter", object.Name("FlateDecode"))
-		st.Dict.Set("Length1", object.Int(len(subset)))
+		if isCFF {
+			st.Dict.Set("Subtype", object.Name("CIDFontType0C"))
+		} else {
+			st.Dict.Set("Length1", object.Int(len(subset)))
+		}
 		fontFileRef = w.Add(st)
 	}
 
@@ -345,7 +354,11 @@ func (f *CJKFont) BuildDict(w *writer.Writer) *object.Dict {
 	}
 	desc.Set("StemV", object.Int(80))
 	if fontFileRef != nil {
-		desc.Set("FontFile2", fontFileRef)
+		if isCFF {
+			desc.Set("FontFile3", fontFileRef)
+		} else {
+			desc.Set("FontFile2", fontFileRef)
+		}
 	}
 	descRef := w.Add(desc)
 
@@ -362,7 +375,11 @@ func (f *CJKFont) BuildDict(w *writer.Writer) *object.Dict {
 		}
 		cidFont = object.NewDict()
 		cidFont.Set("Type", object.Name("Font"))
-		cidFont.Set("Subtype", object.Name("CIDFontType2"))
+		if isCFF {
+			cidFont.Set("Subtype", object.Name("CIDFontType0"))
+		} else {
+			cidFont.Set("Subtype", object.Name("CIDFontType2"))
+		}
 		cidFont.Set("BaseFont", object.Name(subsetName))
 		cidFont.Set("CIDSystemInfo", object.NewDict().
 			Set("Registry", object.Str("Adobe")).
@@ -373,7 +390,10 @@ func (f *CJKFont) BuildDict(w *writer.Writer) *object.Dict {
 		if len(wArr) > 0 {
 			cidFont.Set("W", wArr)
 		}
-		cidFont.Set("CIDToGIDMap", object.Name("Identity"))
+		if !isCFF {
+			// CFF 子集已将 CID 重编号为字形序（CIDFontType0 无 CIDToGIDMap 概念）
+			cidFont.Set("CIDToGIDMap", object.Name("Identity"))
+		}
 	}
 
 	// 5. ToUnicode CMap

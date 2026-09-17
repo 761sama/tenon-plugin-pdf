@@ -14,10 +14,14 @@ type GlyphMapping struct {
 
 // Subset 按给定顺序重建字体：输出字体中字形 i 对应 glyphs[i]。
 // glyphs[0] 应为 .notdef（GID 0）。复合字形的组件会自动纳入（追加到末尾）。
-// 输出为合法的可独立使用的 TrueType 文件。
+// glyf 轮廓输出为合法的可独立使用的 TrueType 文件；
+// CFF 轮廓（OpenType）输出为重建的独立 CFF 数据（CID 键，CID 与输出字形序一致）。
 func (f *Font) Subset(glyphs []GlyphMapping) ([]byte, error) {
 	if len(glyphs) == 0 || glyphs[0].GID != 0 {
 		return nil, fmt.Errorf("ttf: 子集首个字形必须是 .notdef（GID 0）")
+	}
+	if f.isCFF {
+		return f.subsetCFF(glyphs)
 	}
 
 	// 1. 组件闭包
