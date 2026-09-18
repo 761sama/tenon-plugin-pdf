@@ -1,6 +1,7 @@
 package page
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -82,6 +83,21 @@ func TestAlphaDedup(t *testing.T) {
 	p.SetAlpha(0.8, 0.5)
 	if len(p.ExtGStates()) != 2 {
 		t.Errorf("gstates = %d, want 2", len(p.ExtGStates()))
+	}
+}
+
+// 测试下划线定位在下降部底端之下（不压住字形下部）。
+func TestUnderlinePosition(t *testing.T) {
+	p := New(A4)
+	p.Underline(font.Helvetica, 14, 72, 700, "gy")
+	exp := 700 + font.Helvetica.Descent(14) - 14*0.03 - 14*0.05/2
+	if exp >= 700+font.Helvetica.Descent(14) {
+		t.Fatalf("下划线中心 %v 未低于下降部底端 %v", exp, 700+font.Helvetica.Descent(14))
+	}
+	s := string(p.Content.Bytes())
+	want := strconv.FormatFloat(exp, 'f', -1, 64)
+	if !strings.Contains(s, "72 "+want+" m") {
+		t.Errorf("内容流未含预期下划线起点（y=%s）：\n%s", want, s)
 	}
 }
 

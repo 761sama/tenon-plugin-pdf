@@ -188,11 +188,13 @@ func (p *Page) TextBox(f font.Resource, size, x, yTop, w float64, s string, alig
 	return f.Ascent(size) - f.Descent(size) + leading*float64(len(lines)-1)
 }
 
-// 为单行文本加下划线（根据字体度量自动定位）。
+// 为单行文本加下划线：线定位在字体下降部底端之下（留小间隙），
+// 避免压住 g/y/p 等字形下探部分与 CJK 字形底部。
 func (p *Page) Underline(f font.Resource, size, x, y float64, s string) {
 	thick := size * 0.05
+	ly := y + f.Descent(size) - size*0.03 - thick/2
 	p.Content.SaveState().LineWidth(thick).
-		MoveTo(x, y-size*0.1).LineTo(x+f.TextWidth(s, size), y-size*0.1).Stroke().
+		MoveTo(x, ly).LineTo(x+f.TextWidth(s, size), ly).Stroke().
 		RestoreState()
 }
 
