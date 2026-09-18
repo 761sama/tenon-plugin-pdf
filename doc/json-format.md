@@ -154,6 +154,7 @@ doc.SaveFile("out.pdf")
 | `style` | string | — | 单元格文本默认样式（引用 `styles`） |
 | `columns` | array | 是 | 列定义；`width` 为 pt，`0` 表示均分剩余宽度；`align` 为该列默认对齐 |
 | `headerRows` | int | 0 | 前 N 行作为表头（底色/居中/垂直居中，跨页自动重复；支持多行文本） |
+| `headerRepeat` | bool | `true` | 跨页时是否重复表头；`false` 时表头仅出现在首页（`headerRows` > 0 时有效） |
 | `header.background` | string | — | 表头行底色 |
 | `header.align` | string | `"center"` | 表头文本对齐 |
 | `header.style` | string | — | 表头文本命名样式（仅取其颜色；字号/字体随表格 `style`） |

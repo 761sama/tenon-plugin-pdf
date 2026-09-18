@@ -360,7 +360,7 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 
 	// 分页布局：把内容行分配到各页（跨行块优先整体移动，超页则窗口化拆分）
 	runs := []pageRun{}
-	cur := pageRun{page: p, top: yTop, start: headerRows}
+	cur := pageRun{page: p, top: yTop, start: headerRows, showHeader: true}
 	y := yTop - headerH
 	for i := headerRows; i < len(heights); i++ {
 		h := heights[i]
@@ -375,8 +375,8 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 				cur.end = j
 				runs = append(runs, cur)
 				np, ntop := newPage()
-				cur = pageRun{page: np, top: ntop, start: j}
-				y = ntop - headerH
+				cur = pageRun{page: np, top: ntop, start: j, showHeader: t.HeaderRepeat}
+				y = ntop - t.contHeaderH(headerH)
 				for k := j; k < i; k++ {
 					y -= heights[k]
 				}
@@ -399,13 +399,16 @@ func (t *Table) Draw(p *page.Page, x, yTop, w, bottomY float64, newPage func() (
 	// 逐页渲染
 	for _, run := range runs {
 		if run.split {
-			t.renderSplitRun(run.page, x, run.top, widths, heights, grid, headerH, headerRows, run.start, run.end, run.wTop, run.wBot)
+			t.renderSplitRun(run.page, x, run.top, widths, heights, grid, headerH, headerRows, run.start, run.end, run.wTop, run.wBot, run.showHeader)
 		} else {
-			t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, headerRows, run.start, run.end)
+			t.renderRun(run.page, x, run.top, w, widths, heights, grid, headerH, headerRows, run.start, run.end, run.showHeader)
 		}
 	}
 	last := runs[len(runs)-1]
-	endY := last.top - headerH
+	endY := last.top
+	if last.showHeader {
+		endY -= headerH
+	}
 	if last.split {
 		endY -= last.wBot - last.wTop
 	} else {
@@ -431,8 +434,14 @@ func (t *Table) splitRuns(runs *[]pageRun, cur pageRun, be int, heights []float6
 	}
 	total := cum[be-bs]
 
+	// 首窗口沿用当前页的表头策略；后续窗口（新页）按 HeaderRepeat 决定
+	hdr := headerH
+	if !cur.showHeader {
+		hdr = 0
+	}
+	show := cur.showHeader
 	pg, ptop := cur.page, cur.top
-	avail := ptop - headerH - bottomY
+	avail := ptop - hdr - bottomY
 	wTop := 0.0
 	for wTop < total {
 		if avail <= 0 {
@@ -445,16 +454,18 @@ func (t *Table) splitRuns(runs *[]pageRun, cur pageRun, be int, heights []float6
 		} else if b := t.cleanCut(grid, widths, heights, bs, be, wTop, limit); b > wTop {
 			wBot = b // 吸附到不切断任何文本行的边界
 		}
-		*runs = append(*runs, pageRun{page: pg, top: ptop, start: bs, end: be, split: true, wTop: wTop, wBot: wBot})
+		*runs = append(*runs, pageRun{page: pg, top: ptop, start: bs, end: be, split: true, wTop: wTop, wBot: wBot, showHeader: show})
 		wTop = wBot
 		if wTop < total {
 			pg, ptop = newPage()
-			avail = ptop - headerH - bottomY
+			show = t.HeaderRepeat
+			hdr = t.contHeaderH(headerH)
+			avail = ptop - hdr - bottomY
 		}
 	}
 	// 块后行从最后一个拆分页继续
-	next := pageRun{page: pg, top: ptop, start: be}
-	return next, ptop - headerH - (total - wTopOfLast(*runs))
+	next := pageRun{page: pg, top: ptop, start: be, showHeader: show}
+	return next, ptop - hdr - (total - wTopOfLast(*runs))
 }
 
 // 返回 runs 末个（拆分）run 的窗口起点。
@@ -633,6 +644,15 @@ type pageRun struct {
 	start, end int
 	split      bool
 	wTop, wBot float64
+	showHeader bool // 本页是否渲染（并预留）表头
+}
+
+// 续页表头占位高度：HeaderRepeat 为 false 时续页不渲染也不预留表头空间。
+func (t *Table) contHeaderH(headerH float64) float64 {
+	if !t.HeaderRepeat {
+		return 0
+	}
+	return headerH
 }
 
 // cellText 布局单元格文本：返回字体、字号、行距、换行结果与
@@ -655,16 +675,18 @@ func (t *Table) cellText(c placedCell, w, ch float64, header bool) (font.Resourc
 	return f, size, leading, lines, voff
 }
 
-// 渲染一页：表头（表头行或列标题）+ [start, end) 内容行。
+// 渲染一页：表头（表头行或列标题，showHeader 为 false 时跳过）+ [start, end) 内容行。
 func (t *Table) renderRun(p *page.Page, x, top, w float64, widths, heights []float64,
-	grid [][]placedCell, headerH float64, headerRows, start, end int) {
+	grid [][]placedCell, headerH float64, headerRows, start, end int, showHeader bool) {
 	y := top
-	if headerRows > 0 {
-		t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
-		y -= headerH
-	} else if headerH > 0 {
-		t.renderHeader(p, x, y, w, widths, headerH)
-		y -= headerH
+	if showHeader {
+		if headerRows > 0 {
+			t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
+			y -= headerH
+		} else if headerH > 0 {
+			t.renderHeader(p, x, y, w, widths, headerH)
+			y -= headerH
+		}
 	}
 	t.renderRows(p, x, y, widths, heights, grid, start, end, false)
 }
@@ -728,18 +750,20 @@ func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float
 	}
 }
 
-// renderSplitRun 渲染拆分块的一个窗口片段：表头 + 块 [start, end) 中
-// 落在窗口 [wTop, wBot) 内的部分。单元格背景/边框按可见片段绘制；
+// renderSplitRun 渲染拆分块的一个窗口片段：表头（showHeader 为 false 时跳过）+
+// 块 [start, end) 中落在窗口 [wTop, wBot) 内的部分。单元格背景/边框按可见片段绘制；
 // 文本行按行框顶部归属窗口（每行只在一页输出），并以片段矩形裁剪防溢出。
 func (t *Table) renderSplitRun(p *page.Page, x, top float64, widths, heights []float64,
-	grid [][]placedCell, headerH float64, headerRows, start, end int, wTop, wBot float64) {
+	grid [][]placedCell, headerH float64, headerRows, start, end int, wTop, wBot float64, showHeader bool) {
 	y := top
-	if headerRows > 0 {
-		t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
-		y -= headerH
-	} else if headerH > 0 {
-		t.renderHeader(p, x, y, spanWidth(widths, 0, len(widths)), widths, headerH)
-		y -= headerH
+	if showHeader {
+		if headerRows > 0 {
+			t.renderRows(p, x, y, widths, heights, grid, 0, headerRows, true)
+			y -= headerH
+		} else if headerH > 0 {
+			t.renderHeader(p, x, y, spanWidth(widths, 0, len(widths)), widths, headerH)
+			y -= headerH
+		}
 	}
 	pad := t.padding()
 

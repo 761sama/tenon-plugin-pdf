@@ -661,6 +661,9 @@ func (e *engine) table(b *blockSpec) error {
 	}
 
 	headerRows := b.HeaderRows
+	if b.HeaderRepeat != nil {
+		tbl.HeaderRepeat = *b.HeaderRepeat
+	}
 	for ri, row := range b.Rows {
 		cells := make([]table.Cell, 0, len(row))
 		for _, cs := range row {

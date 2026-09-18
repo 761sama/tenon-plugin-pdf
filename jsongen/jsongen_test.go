@@ -84,6 +84,46 @@ func TestErrors(t *testing.T) {
 	}
 }
 
+// headerRepeat：跨页表格表头是否重复可由 JSON 控制（默认重复）。
+func TestHeaderRepeat(t *testing.T) {
+	reg := NewFontRegistry()
+	reg.RegisterBuiltin("helv", "Helvetica")
+	rows := strings.Repeat(`["r","v"],`, 100)
+	build := func(headerRepeat string) (string, int) {
+		spec := `{
+		  "version": 1,
+		  "page": {"size": "A4"},
+		  "styles": {"body": {"font": "helv", "size": 10}},
+		  "content": [
+		    {"type": "table", "style": "body", "headerRows": 1` + headerRepeat + `,
+		      "columns": [{"width": 100}, {"width": 100}],
+		      "rows": [["COLHDR", "COLHDR"],` + rows + `["r","v"]]}
+		  ]
+		}`
+		doc, err := Build([]byte(spec), reg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if doc.PageCount() < 2 {
+			t.Fatalf("表格未分页（%d 页），无法验证表头重复", doc.PageCount())
+		}
+		doc.SetCompress(false)
+		b, err := doc.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b), doc.PageCount()
+	}
+	rep, nPages := build("")
+	if got := strings.Count(rep, "(COLHDR)"); got != 2*nPages {
+		t.Errorf("默认（重复表头）：(COLHDR) 出现 %d 次，期望 %d（每页一行两列）", got, 2*nPages)
+	}
+	noRep, _ := build(`,"headerRepeat": false`)
+	if got := strings.Count(noRep, "(COLHDR)"); got != 2 {
+		t.Errorf("headerRepeat=false：(COLHDR) 出现 %d 次，期望 2（仅首页一行两列）", got)
+	}
+}
+
 // 零宽字符被剔除。
 func TestSanitize(t *testing.T) {
 	got := sanitizeText("\u7532\u200c\u4e59\u200d\u4e19\ufeff\u4e01")

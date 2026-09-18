@@ -212,12 +212,13 @@ type blockSpec struct {
 	// spacer
 	Height float64 `json:"height"`
 	// table
-	Columns    []columnSpec `json:"columns"`
-	HeaderRows int          `json:"headerRows"`
-	Header     headerSpec   `json:"header"`
-	Border     borderSpec   `json:"border"`
-	Padding    float64      `json:"padding"`
-	Rows       [][]cellSpec `json:"rows"`
+	Columns      []columnSpec `json:"columns"`
+	HeaderRows   int          `json:"headerRows"`
+	HeaderRepeat *bool        `json:"headerRepeat"` // 指针区分“未设置”（默认 true）
+	Header       headerSpec   `json:"header"`
+	Border       borderSpec   `json:"border"`
+	Padding      float64      `json:"padding"`
+	Rows         [][]cellSpec `json:"rows"`
 	// columns（多栏）
 	Gap      float64       `json:"gap"`
 	Widths   []float64     `json:"widths"`
