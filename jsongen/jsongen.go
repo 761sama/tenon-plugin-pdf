@@ -105,11 +105,25 @@ func (r *FontRegistry) lookup(id string) (font.Resource, error) {
 // JSON 规格
 
 type documentSpec struct {
-	Version  int                  `json:"version"`
-	Metadata metadataSpec         `json:"metadata"`
-	Page     pageSpec             `json:"page"`
-	Styles   map[string]styleSpec `json:"styles"`
-	Content  []blockSpec          `json:"content"`
+	Version    int                  `json:"version"`
+	Metadata   metadataSpec         `json:"metadata"`
+	Page       pageSpec             `json:"page"`
+	PageNumber *pageNumberSpec      `json:"pageNumber"`
+	Styles     map[string]styleSpec `json:"styles"`
+	Content    []blockSpec          `json:"content"`
+}
+
+// pageNumberSpec 页码配置：全部内容排版完成后按节回绘到各页。
+// 内嵌 styleOverride 提供 font/size/color 等内联覆盖（align 由本结构
+// 同名字段接管，浅层字段优先于嵌入字段）。
+type pageNumberSpec struct {
+	Style    string  `json:"style"`    // 命名样式（取字体/字号/颜色）
+	Format   string  `json:"format"`   // 占位符 {page}/{total}；空取默认
+	Position string  `json:"position"` // bottom（默认）/ top
+	Align    string  `json:"align"`    // left/center（默认）/right
+	Offset   float64 `json:"offset"`   // 距页边缘距离（pt），默认 36
+	Start    int     `json:"start"`    // 起始页码，默认 1
+	styleOverride
 }
 
 type metadataSpec struct {
@@ -250,10 +264,11 @@ func Build(data []byte, fonts *FontRegistry) (*pdf.Document, error) {
 	}
 
 	e := &engine{
-		doc:    pdf.New(),
-		fonts:  fonts,
-		styles: spec.Styles,
-		size:   size,
+		doc:      pdf.New(),
+		fonts:    fonts,
+		styles:   spec.Styles,
+		size:     size,
+		sections: []int{0}, // 首节始终从第 1 页开始
 	}
 	e.margins = [4]float64{72, 72, 72, 72} // top, right, bottom, left
 	if m := spec.Page.Margins; m != nil {
@@ -282,12 +297,17 @@ func Build(data []byte, fonts *FontRegistry) (*pdf.Document, error) {
 			e.spacer(b.Height)
 		case "pageBreak":
 			e.addPage()
+		case "section":
+			e.section()
 		default:
 			err = fmt.Errorf("jsongen: 未知内容块类型 %q", b.Type)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("jsongen: 内容块 #%d（%s）: %w", i, b.Type, err)
 		}
+	}
+	if err := e.drawPageNumbers(spec.PageNumber); err != nil {
+		return nil, fmt.Errorf("jsongen: %w", err)
 	}
 	return e.doc, nil
 }

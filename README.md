@@ -41,7 +41,7 @@ Go 语言 PDF 生成库：**纯标准库实现、零第三方依赖**，输出 P
 | `table` | 表格：定宽/均分/内容自适应列宽、灰底加粗表头、单元格合并（跨列/跨行，含表头行）、边框内边距、跨页自动重复表头（可关闭）、超高行/跨行块跨页拆分 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）；公钥证书加密（PubSec，多收件人、每收件人独立权限） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、RFC 3161 时间戳、证书链验证、多重签名（增量修订）、第三方既有 PDF 签署、验签、自签名/链式证书 |
-| `jsongen` | JSON 描述 → PDF 文档模板引擎（格式见 `doc/json-format.md`）；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
+| `jsongen` | JSON 描述 → PDF 文档模板引擎（格式见 `doc/json-format.md`）：段落/表格/多栏、页码回绘与分节重计数；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 
 ## 安装与导入
 

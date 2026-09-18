@@ -2,6 +2,8 @@ package jsongen
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	pdf "gopkg.761sama.com/tenon-plugin-pdf"
@@ -24,6 +26,9 @@ type engine struct {
 	y     float64 // 下一内容的上边缘
 	atTop bool    // 当前页尚无内容（用于跳过段前距）
 
+	pages    []*page.Page // 已创建的全部页面（页码回绘用）
+	sections []int        // 各节起始页索引（首元素恒为 0）
+
 	// pendingAfter 前一段落的段后距：与下一段的段前距折叠（取较大者，
 	// 与 CSS margin collapsing 一致）；spacer/table 到达时消耗。
 	pendingAfter float64
@@ -41,9 +46,77 @@ func (e *engine) contentW() float64 { return e.size.W - e.margins[3] - e.margins
 // 新建一页并把排版游标重置到页首。
 func (e *engine) addPage() {
 	e.p = e.doc.AddPage(e.size)
+	e.pages = append(e.pages, e.p)
 	e.y = e.size.H - e.margins[0]
 	e.atTop = true
 	e.pendingAfter = 0
+}
+
+// 开始新节：当前页已有内容时强制换页；新节自该页重新计数页码。
+func (e *engine) section() {
+	if !e.atTop {
+		e.addPage()
+	}
+	idx := len(e.pages) - 1
+	if e.sections[len(e.sections)-1] != idx {
+		e.sections = append(e.sections, idx)
+	}
+}
+
+// 全部内容排版完成后按配置回绘页码：逐节计算页码（page 从 start 起）
+// 与节内总页数（total），按 format 渲染后绘制到各页页边。
+func (e *engine) drawPageNumbers(pn *pageNumberSpec) error {
+	if pn == nil {
+		return nil
+	}
+	st, err := e.resolveStyle(pn.Style, &pn.styleOverride)
+	if err != nil {
+		return fmt.Errorf("pageNumber: %w", err)
+	}
+	align, err := parseAlign(pn.Align, text.AlignCenter)
+	if err != nil {
+		return fmt.Errorf("pageNumber: %w", err)
+	}
+	position := pn.Position
+	if position == "" {
+		position = "bottom"
+	}
+	if position != "bottom" && position != "top" {
+		return fmt.Errorf("pageNumber: 未知位置 %q（应为 bottom/top）", pn.Position)
+	}
+	offset := or(pn.Offset, 36)
+	start := pn.Start
+	if start == 0 {
+		start = 1
+	}
+	format := pn.Format
+	if format == "" {
+		format = "第 {page} 页 / 共 {total} 页"
+	}
+	bounds := append(append([]int{}, e.sections...), len(e.pages))
+	for si := 0; si+1 < len(bounds); si++ {
+		from, to := bounds[si], bounds[si+1]
+		total := strconv.Itoa(to - from)
+		for i := from; i < to; i++ {
+			s := strings.NewReplacer("{page}", strconv.Itoa(i-from+start), "{total}", total).Replace(format)
+			s = sanitizeText(s)
+			w := st.font.TextWidth(s, st.size)
+			x := e.left()
+			switch align {
+			case text.AlignCenter:
+				x = e.left() + (e.contentW()-w)/2
+			case text.AlignRight:
+				x = e.left() + e.contentW() - w
+			}
+			y := offset
+			if position == "top" {
+				y = e.size.H - offset
+			}
+			e.pages[i].SetFillColor(st.colr)
+			e.pages[i].DrawText(st.font, st.size, x, y, s)
+		}
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

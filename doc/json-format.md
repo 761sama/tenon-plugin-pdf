@@ -23,6 +23,7 @@ CLI：`tenon-pdf json`（见文末）。
   "version": 1,
   "metadata": { ... },
   "page":     { ... },
+  "pageNumber": { ... },
   "styles":   { ... },
   "content":  [ ... ]
 }
@@ -33,6 +34,7 @@ CLI：`tenon-pdf json`（见文末）。
 | `version` | int | 是 | 格式版本，当前为 `1` |
 | `metadata` | object | 否 | 文档信息字典（标题/作者等） |
 | `page` | object | 是 | 页面尺寸与页边距 |
+| `pageNumber` | object | 否 | 页码配置（分页完成后回绘到各页；缺省不绘制页码） |
 | `styles` | object | 是 | 命名文本样式表（按 `id` 引用已注册字体） |
 | `content` | array | 是 | 内容块序列，按顺序排版、自动分页 |
 
@@ -63,6 +65,33 @@ CLI：`tenon-pdf json`（见文末）。
 | `size` | string \| object | `"A4"` | 预设名（`A3`/`A4`/`A5`/`B5`/`Letter`/`Legal`）或 `{"width": W, "height": H}` 自定义尺寸（pt） |
 | `landscape` | bool | `false` | 横向 |
 | `margins` | object | 四边 72 | 页边距（`top`/`right`/`bottom`/`left`）；给出时未写的边为 0 |
+
+## pageNumber — 页码
+
+全部内容排版完成后，按配置把页码回绘到各页页边（不占用内容区，不影响分页）：
+
+```json
+"pageNumber": {
+  "style": "footer",
+  "format": "第 {page} 页 / 共 {total} 页",
+  "position": "bottom",
+  "align": "center",
+  "offset": 36,
+  "start": 1
+}
+```
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `style` | string | — | 命名样式（取字体/字号/颜色）；亦可内联写 `font`/`size`/`color` 覆盖 |
+| `format` | string | `"第 {page} 页 / 共 {total} 页"` | 页码文本；`{page}` 为页码、`{total}` 为本节总页数 |
+| `position` | string | `"bottom"` | 绘制位置：`bottom`（页底）/ `top`（页顶） |
+| `align` | string | `"center"` | 水平对齐：`left` / `center` / `right`（在左右页边距之间对齐） |
+| `offset` | number | 36 | 基线距页边缘的距离（pt） |
+| `start` | int | 1 | 起始页码 |
+
+页码按「节」计数：文档默认一节，`content` 中的 `section` 块开始新节，
+新节首页从 `start` 重新计数，`{total}` 为该节页数（见下文 section 块）。
 
 ## fonts — 字体注册（代码层，不在 JSON 内）
 
@@ -212,6 +241,16 @@ doc.SaveFile("out.pdf")
 { "type": "pageBreak" }
 ```
 
+### 6. section — 分节
+
+```json
+{ "type": "section" }
+```
+
+开始新节：当前页已有内容时强制换页（紧接着 `pageBreak` 或位于页首时不重复分页）。
+配置了 `pageNumber` 时，新节自该页从 `start` 重新计数页码，`{total}` 为本节页数；
+未配置 `pageNumber` 时与 `pageBreak` 等效。
+
 ## 与库 API 的映射
 
 | JSON 概念 | 对应 API |
@@ -219,9 +258,10 @@ doc.SaveFile("out.pdf")
 | `page.size` / `margins` | `page.Size`、`doc.AddPage` |
 | 字体注册（代码层） | `jsongen.FontRegistry` → `font.LoadCJKFile` / `font.LoadCJKCollectionFile` / 标准 14 字体 |
 | 段落对齐 / 换行 | 与 `text` 包同策略（左/中/右/两端对齐，贪心换行、长词硬拆、中文按字断行） |
-| `table` 块 | `table.New` + `AddRowCells`（`colSpan`/`rowSpan`、`HeaderRows`、单元格颜色覆盖） |
+| `table` 块 | `table.New` + `AddRowCells`（`colSpan`/`rowSpan`、`HeaderRows`、`HeaderRepeat`、单元格颜色覆盖） |
 | `underline` / `strikeThrough` | 文本样式辅助（下划线/删除线） |
-| 自动分页 | 段落排版与表格跨页（表头自动重复） |
+| 自动分页 | 段落排版与表格跨页（表头自动重复，可经 `headerRepeat` 关闭） |
+| `pageNumber` / `section` | 排版完成后回绘页码；分节重新计数 |
 
 ## 命令行
 

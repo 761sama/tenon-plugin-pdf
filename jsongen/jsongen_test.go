@@ -73,6 +73,9 @@ func TestErrors(t *testing.T) {
 		{"未知块类型", `{"version": 1, "content": [{"type": "video"}]}`},
 		{"非法颜色", `{"version": 1, "styles": {"b": {"font": "helv", "color": "red"}},
 		  "content": [{"type": "paragraph", "style": "b", "text": "x"}]}`},
+		{"页码位置非法", `{"version": 1, "styles": {"b": {"font": "helv"}},
+		  "pageNumber": {"style": "b", "position": "middle"}, "content": []}`},
+		{"页码样式未定义", `{"version": 1, "pageNumber": {"style": "ghost"}, "content": []}`},
 	}
 	for _, c := range cases {
 		if _, err := Build([]byte(c.spec), reg); err == nil {
@@ -121,6 +124,85 @@ func TestHeaderRepeat(t *testing.T) {
 	noRep, _ := build(`,"headerRepeat": false`)
 	if got := strings.Count(noRep, "(COLHDR)"); got != 2 {
 		t.Errorf("headerRepeat=false：(COLHDR) 出现 %d 次，期望 2（仅首页一行两列）", got)
+	}
+}
+
+// 页码：按节回绘，section 块强制换页并重新计数。
+func TestPageNumbers(t *testing.T) {
+	reg := NewFontRegistry()
+	reg.RegisterBuiltin("helv", "Helvetica")
+	spec := `{
+	  "version": 1,
+	  "page": {"size": "A4"},
+	  "pageNumber": {"style": "body", "format": "P{page}/{total}"},
+	  "styles": {"body": {"font": "helv", "size": 10}},
+	  "content": [
+	    {"type": "paragraph", "style": "body", "text": "a"},
+	    {"type": "pageBreak"},
+	    {"type": "paragraph", "style": "body", "text": "b"},
+	    {"type": "section"},
+	    {"type": "paragraph", "style": "body", "text": "c"},
+	    {"type": "pageBreak"},
+	    {"type": "paragraph", "style": "body", "text": "d"}
+	  ]
+	}`
+	doc, err := Build([]byte(spec), reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if doc.PageCount() != 4 {
+		t.Fatalf("PageCount = %d，期望 4（section 强制换页）", doc.PageCount())
+	}
+	doc.SetCompress(false)
+	b, err := doc.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	// 两节各 2 页：第 1 节页 1-2，第 2 节重新计数页 1-2
+	if got := strings.Count(s, "(P1/2)"); got != 2 {
+		t.Errorf("(P1/2) 出现 %d 次，期望 2（两节各自的首页）", got)
+	}
+	if got := strings.Count(s, "(P2/2)"); got != 2 {
+		t.Errorf("(P2/2) 出现 %d 次，期望 2（两节各自的次页）", got)
+	}
+	if strings.Contains(s, "(P3/") || strings.Contains(s, "(P4/") {
+		t.Error("第 2 节未重新计数（出现 P3/P4）")
+	}
+}
+
+// 页码起始值与位置：start 偏移页码，top 绘制于页顶。
+func TestPageNumbersStart(t *testing.T) {
+	reg := NewFontRegistry()
+	reg.RegisterBuiltin("helv", "Helvetica")
+	spec := `{
+	  "version": 1,
+	  "page": {"size": "A4"},
+	  "pageNumber": {"style": "body", "format": "{page}/{total}", "start": 0, "position": "top"},
+	  "styles": {"body": {"font": "helv", "size": 10}},
+	  "content": [
+	    {"type": "paragraph", "style": "body", "text": "a"},
+	    {"type": "section"},
+	    {"type": "paragraph", "style": "body", "text": "b"}
+	  ]
+	}`
+	doc, err := Build([]byte(spec), reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc.SetCompress(false)
+	b, err := doc.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	// start 为 0 时按缺省 1 处理：两节各 1 页，均为 1/1
+	if got := strings.Count(s, "(1/1)"); got != 2 {
+		t.Errorf("(1/1) 出现 %d 次，期望 2", got)
+	}
+	// 页顶绘制：基线 y = 页高 - offset（841.89 - 36 = 805.89）
+	if !strings.Contains(s, "805.89") {
+		t.Error("页码未绘制在页顶（position=top）")
 	}
 }
 
