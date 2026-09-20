@@ -76,6 +76,9 @@ func TestErrors(t *testing.T) {
 		{"页码位置非法", `{"version": 1, "styles": {"b": {"font": "helv"}},
 		  "pageNumber": {"style": "b", "position": "middle"}, "content": []}`},
 		{"页码样式未定义", `{"version": 1, "pageNumber": {"style": "ghost"}, "content": []}`},
+		{"边框样式非法", `{"version": 1, "styles": {"b": {"font": "helv"}},
+		  "content": [{"type": "table", "style": "b", "border": {"style": "dotted"},
+		    "columns": [{"width": 100}], "rows": [["a"]]}]}`},
 	}
 	for _, c := range cases {
 		if _, err := Build([]byte(c.spec), reg); err == nil {
@@ -203,6 +206,46 @@ func TestPageNumbersStart(t *testing.T) {
 	// 页顶绘制：基线 y = 页高 - offset（841.89 - 36 = 805.89）
 	if !strings.Contains(s, "805.89") {
 		t.Error("页码未绘制在页顶（position=top）")
+	}
+}
+
+// 边框样式：JSON 可关闭框线（style none 或 width 显式 0）与切换仅横线样式。
+func TestBorderStyleJSON(t *testing.T) {
+	reg := NewFontRegistry()
+	reg.RegisterBuiltin("helv", "Helvetica")
+	build := func(border string) string {
+		spec := `{
+		  "version": 1,
+		  "styles": {"body": {"font": "helv", "size": 10}},
+		  "content": [
+		    {"type": "table", "style": "body"` + border + `,
+		      "columns": [{"width": 100}, {"width": 100}],
+		      "rows": [["a", "b"]]}
+		  ]
+		}`
+		doc, err := Build([]byte(spec), reg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		doc.SetCompress(false)
+		b, err := doc.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	if s := build(""); !strings.Contains(s, "re\nS") {
+		t.Error("默认应绘制全框线（矩形描边）")
+	}
+	if s := build(`,"border": {"style": "none"}`); strings.Contains(s, "S\n") {
+		t.Error("border.style=none 不应含任何描边操作")
+	}
+	if s := build(`,"border": {"width": 0}`); strings.Contains(s, "S\n") {
+		t.Error("border.width=0 应等价于关闭框线")
+	}
+	sh := build(`,"border": {"style": "horizontal"}`)
+	if strings.Contains(sh, "re\nS") || !strings.Contains(sh, "l\nS") {
+		t.Error("border.style=horizontal 应仅含线段描边")
 	}
 }
 

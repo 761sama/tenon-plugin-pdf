@@ -187,8 +187,9 @@ doc.SaveFile("out.pdf")
 | `header.background` | string | — | 表头行底色 |
 | `header.align` | string | `"center"` | 表头文本对齐 |
 | `header.style` | string | — | 表头文本命名样式（仅取其颜色；字号/字体随表格 `style`） |
-| `border.width` | number | 0.5 | 边框线宽 |
+| `border.width` | number | 0.5 | 边框线宽；显式给 `0` 等价于 `style: "none"`（关闭框线） |
 | `border.color` | string | `"#000000"` | 边框颜色 |
+| `border.style` | string | `"all"` | 边框样式：`all`（全框线）/ `none`（关闭）/ `horizontal`（仅水平线，三线表样式）/ `vertical`（仅垂直线）；与 `width: 0` 同时给出时以 `style` 为准 |
 | `padding` | number | 4 | 单元格内边距（pt） |
 | `rows` | array | 是 | 数据行；单元格为字符串简写或单元格对象 |
 

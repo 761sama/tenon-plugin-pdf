@@ -129,6 +129,33 @@ func TestPaginationRepeatsHeader(t *testing.T) {
 	}
 }
 
+// 测试边框样式：全框线（默认）、关闭、仅水平线、仅垂直线。
+func TestBorderStyle(t *testing.T) {
+	draw := func(st BorderStyle) string {
+		tb := New(Column{Width: 100}, Column{Width: 100})
+		tb.BorderStyle = st
+		tb.AddRow("a", "b")
+		p := page.New(page.A4)
+		tb.Draw(p, 50, 700, 200, 50, nil)
+		return string(p.Content.Bytes())
+	}
+	// 行高 = LineHeight(10)+2*4 = 19.5，行底 y = 680.5
+	if s := draw(BorderAll); !strings.Contains(s, "re\nS") {
+		t.Errorf("BorderAll 应含矩形描边：\n%s", s)
+	}
+	if s := draw(BorderNone); strings.Contains(s, "S\n") {
+		t.Errorf("BorderNone 不应含任何描边操作：\n%s", s)
+	}
+	sh := draw(BorderHorizontal)
+	if strings.Contains(sh, "re\nS") || !strings.Contains(sh, "50 680.5 m\n150 680.5 l\nS") {
+		t.Errorf("BorderHorizontal 应仅含水平线描边：\n%s", sh)
+	}
+	sv := draw(BorderVertical)
+	if strings.Contains(sv, "re\nS") || !strings.Contains(sv, "50 680.5 m\n50 700 l\nS") {
+		t.Errorf("BorderVertical 应仅含垂直线描边：\n%s", sv)
+	}
+}
+
 // 测试超过整页高度的行不会导致死循环，分页次数有上限。
 func TestOversizeRowNoInfiniteLoop(t *testing.T) {
 	tb := New(Column{Title: "A", Width: 100})

@@ -44,7 +44,7 @@ err := doc.SaveFile("out.pdf")
 | `outline` | 书签大纲（多级、加粗/斜体/颜色、折叠） |
 | `metadata` | 文档信息字典 + XMP 元数据流 |
 | `form` | AcroForm 交互表单：文本域、复选框 |
-| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行，含表头行）、边框、跨页重复表头（`HeaderRepeat` 可关闭）、超高行/跨行块跨页拆分、表头行/单元格颜色覆盖 |
+| `table` | 表格布局与绘制：定宽/均分/内容自适应列宽、灰底表头、单元格合并（跨列/跨行，含表头行）、边框（`BorderStyle`：全框线/关闭/仅横线/仅竖线）、跨页重复表头（`HeaderRepeat` 可关闭）、超高行/跨行块跨页拆分、表头行/单元格颜色覆盖 |
 | `jsongen` | 从 JSON 描述生成 PDF（格式见 `doc/json-format.md`）：页码回绘与分节重计数；字体经 `FontRegistry` 代码层注册，JSON 禁止携带字体路径 |
 | `security` | 标准安全处理器：用户/所有者密码、权限位、AES-128（R4）/AES-256（R6）加密；公钥证书加密（PubSec，多收件人） |
 | `sign` | PKCS#7/CMS 数字签名：ByteRange 回填、RSA/ECDSA、验签、证书链验证、RFC 3161 时间戳、多重签名（增量会签）、第三方既有 PDF 签署、自签名/链式证书 |

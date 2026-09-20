@@ -52,6 +52,16 @@ func (c Cell) Span(colSpan, rowSpan int) Cell {
 	return c
 }
 
+// BorderStyle 表格边框样式。
+type BorderStyle int
+
+const (
+	BorderAll        BorderStyle = iota // 全部框线（默认）
+	BorderNone                          // 不绘制框线
+	BorderHorizontal                    // 仅水平线（三线表样式）
+	BorderVertical                      // 仅垂直线
+)
+
 // Table 表格。
 type Table struct {
 	Columns []Column
@@ -67,6 +77,7 @@ type Table struct {
 	RowBg        color.Color   // 内容行背景色，默认白（nil 不填充）
 	Border       color.Color   // 边框色，默认黑
 	BorderW      float64       // 边框线宽，默认 0.5
+	BorderStyle  BorderStyle   // 边框样式，默认 BorderAll
 	HeaderRepeat bool          // 跨页时重复表头，默认 true
 
 	// HeaderRows 将 Rows 前 N 行作为表头行（底色 HeaderBg，跨页随 HeaderRepeat 重复）。
@@ -183,6 +194,25 @@ func (t *Table) borderW() float64 {
 		return t.BorderW
 	}
 	return 0.5
+}
+
+// 按 BorderStyle 描边单元格矩形（x, y 为左下角）；BorderNone 时不绘制。
+func (t *Table) strokeBox(p *page.Page, x, y, w, h float64) {
+	if t.BorderStyle == BorderNone {
+		return
+	}
+	p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
+	switch t.BorderStyle {
+	case BorderHorizontal:
+		p.Line(x, y, x+w, y)
+		p.Line(x, y+h, x+w, y+h)
+	case BorderVertical:
+		p.Line(x, y, x, y+h)
+		p.Line(x+w, y, x+w, y+h)
+	default: // BorderAll
+		p.StrokeRect(x, y, w, h)
+	}
+	p.Restore()
 }
 
 // 返回内容文本色，未设置时取默认黑色。
@@ -720,9 +750,7 @@ func (t *Table) renderRows(p *page.Page, x, top float64, widths, heights []float
 				p.FillRect(cx, y-ch, cw, ch)
 				p.Restore()
 			}
-			p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
-			p.StrokeRect(cx, y-ch, cw, ch)
-			p.Restore()
+			t.strokeBox(p, cx, y-ch, cw, ch)
 			if c.Text != "" {
 				txtColor := c.Color
 				if txtColor == nil {
@@ -810,9 +838,7 @@ func (t *Table) renderSplitRun(p *page.Page, x, top float64, widths, heights []f
 				p.FillRect(cx, pageY(vb), cw, vb-vt)
 				p.Restore()
 			}
-			p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
-			p.StrokeRect(cx, pageY(vb), cw, vb-vt)
-			p.Restore()
+			t.strokeBox(p, cx, pageY(vb), cw, vb-vt)
 			if c.Text == "" {
 				continue
 			}
@@ -862,13 +888,11 @@ func (t *Table) renderHeader(p *page.Page, x, y, w float64, widths []float64, hh
 	p.Save().SetFillColor(t.headerBg())
 	p.FillRect(x, y-hh, w, hh)
 	p.Restore()
-	p.Save().SetStrokeColor(t.border()).SetLineWidth(t.borderW())
 	cx := x
 	for _, cw := range widths {
-		p.StrokeRect(cx, y-hh, cw, hh)
+		t.strokeBox(p, cx, y-hh, cw, hh)
 		cx += cw
 	}
-	p.Restore()
 	f := t.headFont()
 	size := t.headerSize()
 	cx = x

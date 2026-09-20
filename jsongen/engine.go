@@ -706,13 +706,28 @@ func (e *engine) table(b *blockSpec) error {
 	if b.Padding > 0 {
 		tbl.Padding = b.Padding
 	}
-	if b.Border.Width > 0 {
-		tbl.BorderW = b.Border.Width
+	if b.Border.Width != nil {
+		if *b.Border.Width <= 0 {
+			tbl.BorderStyle = table.BorderNone
+		} else {
+			tbl.BorderW = *b.Border.Width
+		}
 	}
 	if c, err := parseColor(b.Border.Color); err != nil {
 		return err
 	} else if c != nil {
 		tbl.Border = c
+	}
+	switch b.Border.Style {
+	case "", "all":
+	case "none":
+		tbl.BorderStyle = table.BorderNone
+	case "horizontal":
+		tbl.BorderStyle = table.BorderHorizontal
+	case "vertical":
+		tbl.BorderStyle = table.BorderVertical
+	default:
+		return fmt.Errorf("未知边框样式 %q（应为 all/none/horizontal/vertical）", b.Border.Style)
 	}
 	if c, err := parseColor(b.Header.Background); err != nil {
 		return err

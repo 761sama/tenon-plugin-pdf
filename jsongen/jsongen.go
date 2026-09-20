@@ -192,9 +192,11 @@ type headerSpec struct {
 	Style      string `json:"style"`
 }
 
+// borderSpec 表格边框；Width 指针区分“未设置”，显式 0 等价于 style none。
 type borderSpec struct {
-	Width float64 `json:"width"`
-	Color string  `json:"color"`
+	Width *float64 `json:"width"`
+	Color string   `json:"color"`
+	Style string   `json:"style"` // all（默认）/none/horizontal/vertical
 }
 
 type cellSpec struct {
