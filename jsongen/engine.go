@@ -26,8 +26,8 @@ type engine struct {
 	y     float64 // 下一内容的上边缘
 	atTop bool    // 当前页尚无内容（用于跳过段前距）
 
-	pages    []*page.Page // 已创建的全部页面（页码回绘用）
-	sections []int        // 各节起始页索引（首元素恒为 0）
+	pages    []*page.Page  // 已创建的全部页面（页码回绘用）
+	sections []sectionInfo // 各节起始页索引与页码开关（首元素恒为 {0, true}）
 
 	// pendingAfter 前一段落的段后距：与下一段的段前距折叠（取较大者，
 	// 与 CSS margin collapsing 一致）；spacer/table 到达时消耗。
@@ -43,6 +43,12 @@ func (e *engine) bottom() float64 { return e.margins[2] }
 // 返回内容区宽度。
 func (e *engine) contentW() float64 { return e.size.W - e.margins[3] - e.margins[1] }
 
+// sectionInfo 分节记录：起始页索引与是否回绘页码。
+type sectionInfo struct {
+	start      int
+	pageNumber bool
+}
+
 // 新建一页并把排版游标重置到页首。
 func (e *engine) addPage() {
 	e.p = e.doc.AddPage(e.size)
@@ -53,18 +59,29 @@ func (e *engine) addPage() {
 }
 
 // 开始新节：当前页已有内容时强制换页；新节自该页重新计数页码。
-func (e *engine) section() {
+// PageNumber 为 false 时本节不回绘页码；位于页首（含文档开头）的 section
+// 块不产生新节，仅以其 PageNumber 配置当前节。
+func (e *engine) section(b *blockSpec) {
 	if !e.atTop {
 		e.addPage()
 	}
 	idx := len(e.pages) - 1
-	if e.sections[len(e.sections)-1] != idx {
-		e.sections = append(e.sections, idx)
+	if last := &e.sections[len(e.sections)-1]; last.start == idx {
+		if b.PageNumber != nil {
+			last.pageNumber = *b.PageNumber
+		}
+		return
 	}
+	show := true
+	if b.PageNumber != nil {
+		show = *b.PageNumber
+	}
+	e.sections = append(e.sections, sectionInfo{start: idx, pageNumber: show})
 }
 
 // 全部内容排版完成后按配置回绘页码：逐节计算页码（page 从 start 起）
-// 与节内总页数（total），按 format 渲染后绘制到各页页边。
+// 与节内总页数（total），按 format 渲染后绘制到各页页边；
+// pageNumber 为 false 的节整节跳过。
 func (e *engine) drawPageNumbers(pn *pageNumberSpec) error {
 	if pn == nil {
 		return nil
@@ -93,9 +110,15 @@ func (e *engine) drawPageNumbers(pn *pageNumberSpec) error {
 	if format == "" {
 		format = "第 {page} 页 / 共 {total} 页"
 	}
-	bounds := append(append([]int{}, e.sections...), len(e.pages))
-	for si := 0; si+1 < len(bounds); si++ {
-		from, to := bounds[si], bounds[si+1]
+	for si, sec := range e.sections {
+		if !sec.pageNumber {
+			continue
+		}
+		from := sec.start
+		to := len(e.pages)
+		if si+1 < len(e.sections) {
+			to = e.sections[si+1].start
+		}
 		total := strconv.Itoa(to - from)
 		for i := from; i < to; i++ {
 			s := strings.NewReplacer("{page}", strconv.Itoa(i-from+start), "{total}", total).Replace(format)

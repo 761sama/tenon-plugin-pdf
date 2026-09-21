@@ -245,12 +245,16 @@ doc.SaveFile("out.pdf")
 ### 6. section — 分节
 
 ```json
-{ "type": "section" }
+{ "type": "section", "pageNumber": false }
 ```
 
 开始新节：当前页已有内容时强制换页（紧接着 `pageBreak` 或位于页首时不重复分页）。
-配置了 `pageNumber` 时，新节自该页从 `start` 重新计数页码，`{total}` 为本节页数；
-未配置 `pageNumber` 时与 `pageBreak` 等效。
+配置了顶层 `pageNumber` 时，新节自该页从 `start` 重新计数页码，`{total}` 为本节页数；
+未配置顶层 `pageNumber` 时与 `pageBreak` 等效。
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `pageNumber` | bool | `true` | 本节是否回绘页码；`false` 时本节各页不绘制页码（不影响其他节的计数与回绘）。位于页首（含文档开头）的 `section` 块不产生新节，仅以其 `pageNumber` 配置当前节 |
 
 ## 与库 API 的映射
 
@@ -262,7 +266,7 @@ doc.SaveFile("out.pdf")
 | `table` 块 | `table.New` + `AddRowCells`（`colSpan`/`rowSpan`、`HeaderRows`、`HeaderRepeat`、单元格颜色覆盖） |
 | `underline` / `strikeThrough` | 文本样式辅助（下划线/删除线） |
 | 自动分页 | 段落排版与表格跨页（表头自动重复，可经 `headerRepeat` 关闭） |
-| `pageNumber` / `section` | 排版完成后回绘页码；分节重新计数 |
+| `pageNumber` / `section` | 排版完成后回绘页码；分节重新计数，节可单独关闭页码 |
 
 ## 命令行
 

@@ -209,6 +209,58 @@ func TestPageNumbersStart(t *testing.T) {
 	}
 }
 
+// 节级页码开关：section 块的 pageNumber=false 关闭本节页码回绘，
+// 其余节不受影响；位于页首（含文档开头）的 section 块不产生新节，
+// 仅配置当前节。
+func TestPageNumberSectionHidden(t *testing.T) {
+	reg := NewFontRegistry()
+	reg.RegisterBuiltin("helv", "Helvetica")
+	build := func(content string) (string, int) {
+		spec := `{
+		  "version": 1,
+		  "page": {"size": "A4"},
+		  "pageNumber": {"style": "body", "format": "P{page}/{total}"},
+		  "styles": {"body": {"font": "helv", "size": 10}},
+		  "content": [` + content + `]
+		}`
+		doc, err := Build([]byte(spec), reg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		doc.SetCompress(false)
+		b, err := doc.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b), doc.PageCount()
+	}
+	// 三节各 1 页，第二节关闭页码：仅首节与末节回绘 1/1
+	s, n := build(`
+	    {"type": "paragraph", "style": "body", "text": "a"},
+	    {"type": "section", "pageNumber": false},
+	    {"type": "paragraph", "style": "body", "text": "b"},
+	    {"type": "section"},
+	    {"type": "paragraph", "style": "body", "text": "c"}
+	`)
+	if n != 3 {
+		t.Fatalf("PageCount = %d，期望 3", n)
+	}
+	if got := strings.Count(s, "(P1/1)"); got != 2 {
+		t.Errorf("(P1/1) 出现 %d 次，期望 2（第二节不回绘）", got)
+	}
+	// 文档开头的 section 块不产生新节，仅关闭首节页码：全文无页码
+	s, n = build(`
+	    {"type": "section", "pageNumber": false},
+	    {"type": "paragraph", "style": "body", "text": "a"}
+	`)
+	if n != 1 {
+		t.Fatalf("PageCount = %d，期望 1（页首 section 不重复分页）", n)
+	}
+	if strings.Contains(s, "(P1/1)") {
+		t.Error("首节页码未关闭")
+	}
+}
+
 // 边框样式：JSON 可关闭框线（style none 或 width 显式 0）与切换仅横线样式。
 func TestBorderStyleJSON(t *testing.T) {
 	reg := NewFontRegistry()

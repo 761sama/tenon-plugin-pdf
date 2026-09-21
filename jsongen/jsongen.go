@@ -239,6 +239,8 @@ type blockSpec struct {
 	Gap      float64       `json:"gap"`
 	Widths   []float64     `json:"widths"`
 	Children [][]blockSpec `json:"children"`
+	// section
+	PageNumber *bool `json:"pageNumber"` // 本节是否回绘页码（默认 true）
 }
 
 // ---------------------------------------------------------------------------
@@ -270,7 +272,7 @@ func Build(data []byte, fonts *FontRegistry) (*pdf.Document, error) {
 		fonts:    fonts,
 		styles:   spec.Styles,
 		size:     size,
-		sections: []int{0}, // 首节始终从第 1 页开始
+		sections: []sectionInfo{{start: 0, pageNumber: true}}, // 首节始终从第 1 页开始
 	}
 	e.margins = [4]float64{72, 72, 72, 72} // top, right, bottom, left
 	if m := spec.Page.Margins; m != nil {
@@ -300,7 +302,7 @@ func Build(data []byte, fonts *FontRegistry) (*pdf.Document, error) {
 		case "pageBreak":
 			e.addPage()
 		case "section":
-			e.section()
+			e.section(b)
 		default:
 			err = fmt.Errorf("jsongen: 未知内容块类型 %q", b.Type)
 		}
